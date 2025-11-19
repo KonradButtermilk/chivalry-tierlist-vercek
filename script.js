@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
         adminPassword = '';
         localStorage.removeItem('admin_password');
         updateUIForAuth();
-        fetchData(); // Re-render to remove drag listeners if needed (though CSS handles pointer-events mostly, JS check is safer)
+        fetchData();
     });
 
     cancelLoginBtn.addEventListener('click', () => {
@@ -82,9 +82,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- API Logic ---
     async function fetchData() {
         try {
+            console.log('Fetching data from:', API_URL);
             const response = await fetch(API_URL);
-            if (!response.ok) throw new Error('Failed to fetch');
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`Server Error: ${response.status} ${errText}`);
+            }
+
             const players = await response.json();
+            console.log('Players received:', players);
+
+            if (players.length === 0) {
+                console.warn('Database is empty!');
+            }
 
             // Reset data
             tierData = { 1: [], 2: [], 3: [], 4: [], 5: [] };
@@ -99,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderAllTiers();
         } catch (error) {
             console.error('Error loading data:', error);
-            // Fallback to empty or show error
+            alert(`Błąd pobierania danych: ${error.message}\nSprawdź konsolę (F12) po więcej szczegółów.`);
         }
     }
 
@@ -141,7 +152,6 @@ document.addEventListener('DOMContentLoaded', () => {
     async function addPlayer() {
         const name = nameInput.value.trim();
         if (name && isAdmin) {
-            // Optimistic UI update? No, let's wait for server to ensure ID is correct
             const newPlayer = await apiCall('POST', { name, tier: 1 });
             if (newPlayer) {
                 tierData[1].push(newPlayer);
@@ -245,7 +255,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function movePlayer(id, newTier) {
-        // Optimistic update
         const player = findAndRemoveLocal(id);
         if (player) {
             player.tier = newTier;
@@ -253,10 +262,8 @@ document.addEventListener('DOMContentLoaded', () => {
             tierData[newTier].push(player);
             renderAllTiers();
 
-            // Server update
             const result = await apiCall('PUT', { id, tier: newTier });
             if (!result) {
-                // Revert if failed (simplified: just reload)
                 fetchData();
             }
         }
@@ -271,7 +278,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function findAndRemoveLocal(id) {
-        // Helper to find player in local state and remove them
         for (let t = 1; t <= 5; t++) {
             const idx = tierData[t].findIndex(p => p.id == id);
             if (idx !== -1) {
