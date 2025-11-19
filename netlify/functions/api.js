@@ -60,28 +60,66 @@ exports.handler = async (event, context) => {
 
         // --- POST: Add Player ---
         if (event.httpMethod === 'POST') {
-            const { name, tier } = body;
+            const { name, tier, description } = body;
             if (!name || !tier) throw new Error('Missing name or tier');
 
-            const result = await client.query(
-                'INSERT INTO players (name, tier) VALUES ($1, $2) RETURNING *',
-                [name, tier]
-            );
-            await client.end();
-            return { statusCode: 201, headers, body: JSON.stringify(result.rows[0]) };
+            try {
+                const result = await client.query(
+                    'INSERT INTO players (name, tier, description) VALUES ($1, $2, $3) RETURNING *',
+                    [name, tier, description || '']
+                );
+                await client.end();
+                return { statusCode: 201, headers, body: JSON.stringify(result.rows[0]) };
+            } catch (err) {
+                if (err.code === '23505') { // Unique violation
+                    await client.end();
+                    return {
+                        statusCode: 409,
+                        headers,
+                        body: JSON.stringify({ error: 'Player with this name already exists.' })
+                    };
+                }
+                throw err;
+            }
         }
 
-        // --- PUT: Update Player Tier ---
+        // --- PUT: Update Player Tier/Info ---
         if (event.httpMethod === 'PUT') {
-            const { id, tier } = body;
-            if (!id || !tier) throw new Error('Missing id or tier');
+            const { id, tier, name, description } = body;
+            if (!id) throw new Error('Missing id');
 
-            const result = await client.query(
-                'UPDATE players SET tier = $1 WHERE id = $2 RETURNING *',
-                [tier, id]
-            );
-            await client.end();
-            return { statusCode: 200, headers, body: JSON.stringify(result.rows[0]) };
+            // Dynamic update query
+            const updates = [];
+            const values = [];
+            let idx = 1;
+
+            if (tier) { updates.push(`tier = $${idx++}`); values.push(tier); }
+            if (name) { updates.push(`name = $${idx++}`); values.push(name); }
+            if (description !== undefined) { updates.push(`description = $${idx++}`); values.push(description); }
+
+            if (updates.length === 0) {
+                await client.end();
+                return { statusCode: 400, headers, body: JSON.stringify({ error: 'No fields to update' }) };
+            }
+
+            values.push(id);
+            const query = `UPDATE players SET ${updates.join(', ')} WHERE id = $${idx} RETURNING *`;
+
+            try {
+                const result = await client.query(query, values);
+                await client.end();
+                return { statusCode: 200, headers, body: JSON.stringify(result.rows[0]) };
+            } catch (err) {
+                if (err.code === '23505') {
+                    await client.end();
+                    return {
+                        statusCode: 409,
+                        headers,
+                        body: JSON.stringify({ error: 'Player with this name already exists.' })
+                    };
+                }
+                throw err;
+            }
         }
 
         // --- DELETE: Remove Player ---
@@ -105,8 +143,7 @@ exports.handler = async (event, context) => {
             headers,
             body: JSON.stringify({
                 error: 'Database Error',
-                details: error.message,
-                stack: error.stack
+                details: error.message
             })
         };
     }

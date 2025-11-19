@@ -1,0 +1,20 @@
+[
+    {
+        "id": "local1",
+        "name": "Local Player 1",
+        "tier": 1,
+        "description": "Test player 1"
+    },
+    {
+        "id": "local2",
+        "name": "Local Player 2",
+        "tier": 2,
+        "description": "Test player 2"
+    },
+    {
+        "id": "local3",
+        "name": "Local Player 3",
+        "tier": 3,
+        "description": "Test player 3"
+    }
+]

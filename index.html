@@ -16,115 +16,78 @@
     <div class="app-container">
         <header>
             <h1>Chivalry 2 Tier List</h1>
-            <!-- Players will go here -->
-    </div>
-    </div>
-    <div class="tier-column" data-tier="2">
-        <div class="tier-header tier-2">Tier 2</div>
-        <div class="tier-content" id="tier-2-list"></div>
-    </div>
-    <div class="tier-column" data-tier="3">
-        <div class="tier-header tier-3">Tier 3</div>
-        <div class="tier-content" id="tier-3-list"></div>
-    </div>
-    <div class="tier-column" data-tier="4">
-        <div class="tier-header tier-4">Tier 4</div>
-        <div class="tier-content" id="tier-4-list"></div>
-    </div>
-    <div class="tier-column" data-tier="5">
-        <div class="tier-header tier-5">Tier 5</div>
-        <div class="tier-content" id="tier-5-list"></div>
-    </div>
-    <!DOCTYPE html>
-    <html lang="pl">
-
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Chivalry 2 Tier List</title>
-        <link rel="stylesheet" href="style.css">
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@400;700&display=swap"
-            rel="stylesheet">
-    </head>
-
-    <body>
-        <div class="app-container">
-            <header>
-                <h1>Chivalry 2 Tier List</h1>
-                <div class="auth-controls">
-                    <button id="login-btn" class="secondary-btn">Log In</button>
-                    <button id="logout-btn" class="secondary-btn hidden">Log Out</button>
-                </div>
-                <div class="controls hidden" id="admin-controls">
-                    <input type="text" id="new-player-name" placeholder="Nazwa gracza...">
-                    <button id="add-player-btn">Dodaj Gracza</button>
-                </div>
-            </header>
-
-            <main class="tier-board">
-                <div class="tier-column" data-tier="1">
-                    <div class="tier-header tier-1">Tier 1</div>
-                    <div class="tier-content" id="tier-1-list">
-                        <!-- Players will go here -->
-                    </div>
-                </div>
-                <div class="tier-column" data-tier="2">
-                    <div class="tier-header tier-2">Tier 2</div>
-                    <div class="tier-content" id="tier-2-list"></div>
-                </div>
-                <div class="tier-column" data-tier="3">
-                    <div class="tier-header tier-3">Tier 3</div>
-                    <div class="tier-content" id="tier-3-list"></div>
-                </div>
-                <div class="tier-column" data-tier="4">
-                    <div class="tier-header tier-4">Tier 4</div>
-                    <div class="tier-content" id="tier-4-list"></div>
-                </div>
-                <div class="tier-column" data-tier="5">
-                    <div class="tier-header tier-5">Tier 5</div>
-                    <div class="tier-content" id="tier-5-list"></div>
-                </div>
-            </main>
-
-            <div id="trash-zone" class="trash-zone hidden">
-                <span>🗑️ Upuść tutaj, aby usunąć</span>
+            <div class="auth-controls">
+                <button id="login-btn" class="secondary-btn">Log In</button>
+                <button id="logout-btn" class="secondary-btn hidden">Log Out</button>
             </div>
-
-            <!-- Context Menu -->
-            <div id="context-menu" class="context-menu hidden">
-                <div class="menu-item" id="ctx-edit">✏️ Edytuj</div>
-                <div class="menu-item" id="ctx-delete">🗑️ Usuń</div>
+            <div class="controls hidden" id="admin-controls">
+                <input type="text" id="new-player-name" placeholder="Nazwa gracza...">
+                <button id="add-player-btn">Dodaj Gracza</button>
             </div>
+        </header>
 
-            <!-- Edit Player Modal -->
-            <div id="edit-modal" class="modal hidden">
-                <div class="modal-content">
-                    <h2>Edytuj Gracza</h2>
-                    <input type="text" id="edit-name" placeholder="Nazwa gracza">
-                    <textarea id="edit-desc" placeholder="Opis (opcjonalnie)" rows="4"></textarea>
-                    <div class="modal-actions">
-                        <button id="save-edit">Zapisz</button>
-                        <button id="cancel-edit" class="secondary-btn">Anuluj</button>
-                    </div>
+        <main class="tier-board">
+            <div class="tier-column" data-tier="1">
+                <div class="tier-header tier-1">Tier 1</div>
+                <div class="tier-content" id="tier-1-list">
+                    <!-- Players will go here -->
                 </div>
             </div>
+            <div class="tier-column" data-tier="2">
+                <div class="tier-header tier-2">Tier 2</div>
+                <div class="tier-content" id="tier-2-list"></div>
+            </div>
+            <div class="tier-column" data-tier="3">
+                <div class="tier-header tier-3">Tier 3</div>
+                <div class="tier-content" id="tier-3-list"></div>
+            </div>
+            <div class="tier-column" data-tier="4">
+                <div class="tier-header tier-4">Tier 4</div>
+                <div class="tier-content" id="tier-4-list"></div>
+            </div>
+            <div class="tier-column" data-tier="5">
+                <div class="tier-header tier-5">Tier 5</div>
+                <div class="tier-content" id="tier-5-list"></div>
+            </div>
+        </main>
 
-            <!-- Login Modal -->
-            <div id="login-modal" class="modal hidden">
-                <div class="modal-content">
-                    <h2>Admin Login</h2>
-                    <input type="password" id="admin-password" placeholder="Hasło administratora">
-                    <div class="modal-actions">
-                        <button id="submit-login">Zaloguj</button>
-                        <button id="cancel-login" class="secondary-btn">Anuluj</button>
-                    </div>
+        <div id="trash-zone" class="trash-zone hidden">
+            <span>🗑️ Upuść tutaj, aby usunąć</span>
+        </div>
+
+        <!-- Context Menu -->
+        <div id="context-menu" class="context-menu hidden">
+            <div class="menu-item" id="ctx-edit">✏️ Edytuj</div>
+            <div class="menu-item" id="ctx-delete">🗑️ Usuń</div>
+        </div>
+
+        <!-- Edit Player Modal -->
+        <div id="edit-modal" class="modal hidden">
+            <div class="modal-content">
+                <h2>Edytuj Gracza</h2>
+                <input type="text" id="edit-name" placeholder="Nazwa gracza">
+                <textarea id="edit-desc" placeholder="Opis (opcjonalnie)" rows="4"></textarea>
+                <div class="modal-actions">
+                    <button id="save-edit">Zapisz</button>
+                    <button id="cancel-edit" class="secondary-btn">Anuluj</button>
                 </div>
             </div>
         </div>
 
-        <script src="script.js"></script>
-    </body>
+        <!-- Login Modal -->
+        <div id="login-modal" class="modal hidden">
+            <div class="modal-content">
+                <h2>Admin Login</h2>
+                <input type="password" id="admin-password" placeholder="Hasło administratora">
+                <div class="modal-actions">
+                    <button id="submit-login">Zaloguj</button>
+                    <button id="cancel-login" class="secondary-btn">Anuluj</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    </html>
+    <script src="script.js"></script>
+</body>
+
+</html>

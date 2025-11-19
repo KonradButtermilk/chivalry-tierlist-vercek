@@ -12,7 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const adminPasswordInput = document.getElementById('admin-password');
     const submitLoginBtn = document.getElementById('submit-login');
     const cancelLoginBtn = document.getElementById('cancel-login');
-    const sortBtn = document.getElementById('sort-btn');
 
     // Context Menu & Edit Modal
     const contextMenu = document.getElementById('context-menu');
@@ -28,7 +27,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let tierData = { 1: [], 2: [], 3: [], 4: [], 5: [] };
     let isAdmin = false;
     let adminPassword = '';
-    let sortMode = 'default'; // 'default' (by tier/id), 'alpha' (A-Z)
     let selectedPlayerId = null; // For context menu actions
 
     // --- Initialization ---
@@ -130,6 +128,32 @@ document.addEventListener('DOMContentLoaded', () => {
             renderAllTiers();
         } catch (error) {
             console.error('Error loading data:', error);
+
+            // Fallback to local data if API fails (e.g., running locally without Netlify Functions)
+            try {
+                console.log('Attempting to load local data...');
+                const localResponse = await fetch('local_data.json');
+                if (localResponse.ok) {
+                    const localData = await localResponse.json();
+                    console.log('Loaded local data:', localData);
+
+                    // Reset data
+                    tierData = { 1: [], 2: [], 3: [], 4: [], 5: [] };
+
+                    localData.forEach(p => {
+                        if (tierData[p.tier]) {
+                            tierData[p.tier].push(p);
+                        }
+                    });
+
+                    renderAllTiers();
+                    return; // Exit if local data loaded successfully
+                }
+            } catch (localError) {
+                console.error('Could not load local data:', localError);
+            }
+
+            alert('Błąd pobierania danych. Sprawdź konsolę.');
         }
     }
 
@@ -185,29 +209,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Sorting ---
-    sortBtn.addEventListener('click', () => {
-        if (sortMode === 'default') {
-            sortMode = 'alpha';
-            sortBtn.textContent = '🔤 Sortuj: A-Z';
-        } else {
-            sortMode = 'default';
-            sortBtn.textContent = '🔤 Sortuj: Domyślne';
-        }
-        renderAllTiers();
-    });
-
-    function getSortedPlayers(tierNum) {
-        const players = [...(tierData[tierNum] || [])];
-        if (sortMode === 'alpha') {
-            players.sort((a, b) => a.name.localeCompare(b.name));
-        } else {
-            // Default sort (usually by ID or creation time if preserved, here just array order)
-            // If we wanted strictly by ID: players.sort((a, b) => a.id - b.id);
-        }
-        return players;
-    }
-
     function renderAllTiers() {
         for (let i = 1; i <= 5; i++) {
             renderTier(i);
@@ -218,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const listEl = document.getElementById(`tier-${tierNum}-list`);
         listEl.innerHTML = '';
 
-        const players = getSortedPlayers(tierNum);
+        const players = tierData[tierNum] || [];
         players.forEach((player, index) => {
             const card = createPlayerCard(player, index);
             listEl.appendChild(card);
@@ -418,5 +419,4 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return null;
     }
-});
 });
