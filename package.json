@@ -1,0 +1,9 @@
+{
+  "name": "chivalry-tierlist",
+  "version": "1.0.0",
+  "description": "Chivalry 2 Tier List with Neon DB",
+  "main": "index.html",
+  "dependencies": {
+    "pg": "^8.11.3"
+  }
+}
