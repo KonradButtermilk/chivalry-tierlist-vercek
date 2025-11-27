@@ -61,7 +61,7 @@ exports.handler = async (event, context) => {
         // --- POST: Add Player ---
         if (event.httpMethod === 'POST') {
             const { name, tier, description } = body;
-            if (!name || !tier) throw new Error('Missing name or tier');
+            if (!name || tier === undefined || tier === null) throw new Error('Missing name or tier');
 
             try {
                 const result = await client.query(

@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelEditBtn = document.getElementById('cancel-edit');
 
     // State
-    let tierData = { goat: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+    let tierData = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
     let isAdmin = false;
     let adminPassword = '';
     let selectedPlayerId = null; // For context menu actions
@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const players = await response.json();
 
             // Reset data
-            tierData = { goat: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+            tierData = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
 
             // Group by tier
             players.forEach(p => {
@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log('Loaded local data:', localData);
 
                     // Reset data
-                    tierData = { goat: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+                    tierData = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
 
                     localData.forEach(p => {
                         if (tierData[p.tier]) {
@@ -210,8 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderAllTiers() {
-        renderTier('goat');
-        for (let i = 1; i <= 6; i++) {
+        for (let i = 0; i <= 6; i++) {
             renderTier(i);
         }
     }
@@ -326,8 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function findPlayerById(id) {
-        const tiers = ['goat', 1, 2, 3, 4, 5, 6];
-        for (let t of tiers) {
+        for (let t = 0; t <= 6; t++) {
             const p = tierData[t].find(p => p.id == id);
             if (p) return p;
         }
@@ -413,8 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function findAndRemoveLocal(id) {
-        const tiers = ['goat', 1, 2, 3, 4, 5, 6];
-        for (let t of tiers) {
+        for (let t = 0; t <= 6; t++) {
             const idx = tierData[t].findIndex(p => p.id == id);
             if (idx !== -1) {
                 return tierData[t].splice(idx, 1)[0];
