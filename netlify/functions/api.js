@@ -93,7 +93,7 @@ exports.handler = async (event, context) => {
             const values = [];
             let idx = 1;
 
-            if (tier) { updates.push(`tier = $${idx++}`); values.push(tier); }
+            if (tier !== undefined) { updates.push(`tier = $${idx++}`); values.push(tier); }
             if (name) { updates.push(`name = $${idx++}`); values.push(name); }
             if (description !== undefined) { updates.push(`description = $${idx++}`); values.push(description); }
 
