@@ -32,8 +32,20 @@ exports.handler = async (event, context) => {
     try {
         await client.connect();
 
-        // --- GET: Fetch all players ---
+        // --- GET: Fetch all players or history ---
         if (event.httpMethod === 'GET') {
+            const queryParams = event.queryStringParameters || {};
+
+            if (queryParams.type === 'history') {
+                const result = await client.query('SELECT * FROM history ORDER BY created_at DESC LIMIT 100');
+                await client.end();
+                return {
+                    statusCode: 200,
+                    headers,
+                    body: JSON.stringify(result.rows)
+                };
+            }
+
             const result = await client.query('SELECT * FROM players ORDER BY tier ASC, name ASC');
             await client.end();
             return {
@@ -57,6 +69,19 @@ exports.handler = async (event, context) => {
         }
 
         const body = JSON.parse(event.body || '{}');
+        const ip = event.headers['client-ip'] || event.headers['x-forwarded-for'] || 'unknown';
+
+        // --- Helper: Log History ---
+        async function logHistory(action, playerName, details) {
+            try {
+                await client.query(
+                    'INSERT INTO history (action_type, player_name, details, ip_address) VALUES ($1, $2, $3, $4)',
+                    [action, playerName, details, ip]
+                );
+            } catch (e) {
+                console.error('Failed to log history:', e);
+            }
+        }
 
         // --- POST: Add Player ---
         if (event.httpMethod === 'POST') {
@@ -68,6 +93,9 @@ exports.handler = async (event, context) => {
                     'INSERT INTO players (name, tier, description) VALUES ($1, $2, $3) RETURNING *',
                     [name, tier, description || '']
                 );
+
+                await logHistory('ADD', name, `Added to Tier ${tier}`);
+
                 await client.end();
                 return { statusCode: 201, headers, body: JSON.stringify(result.rows[0]) };
             } catch (err) {
@@ -88,14 +116,36 @@ exports.handler = async (event, context) => {
             const { id, tier, name, description } = body;
             if (!id) throw new Error('Missing id');
 
+            // Get current player state for history
+            const currentRes = await client.query('SELECT * FROM players WHERE id = $1', [id]);
+            const currentPlayer = currentRes.rows[0];
+
+            if (!currentPlayer) {
+                await client.end();
+                return { statusCode: 404, headers, body: JSON.stringify({ error: 'Player not found' }) };
+            }
+
             // Dynamic update query
             const updates = [];
             const values = [];
             let idx = 1;
+            let historyDetails = [];
 
-            if (tier !== undefined) { updates.push(`tier = $${idx++}`); values.push(tier); }
-            if (name) { updates.push(`name = $${idx++}`); values.push(name); }
-            if (description !== undefined) { updates.push(`description = $${idx++}`); values.push(description); }
+            if (tier !== undefined && tier !== currentPlayer.tier) {
+                updates.push(`tier = $${idx++}`);
+                values.push(tier);
+                historyDetails.push(`Tier: ${currentPlayer.tier} -> ${tier}`);
+            }
+            if (name && name !== currentPlayer.name) {
+                updates.push(`name = $${idx++}`);
+                values.push(name);
+                historyDetails.push(`Name: ${currentPlayer.name} -> ${name}`);
+            }
+            if (description !== undefined && description !== currentPlayer.description) {
+                updates.push(`description = $${idx++}`);
+                values.push(description);
+                historyDetails.push(`Description updated`);
+            }
 
             if (updates.length === 0) {
                 await client.end();
@@ -107,6 +157,11 @@ exports.handler = async (event, context) => {
 
             try {
                 const result = await client.query(query, values);
+
+                if (historyDetails.length > 0) {
+                    await logHistory('UPDATE', result.rows[0].name, historyDetails.join(', '));
+                }
+
                 await client.end();
                 return { statusCode: 200, headers, body: JSON.stringify(result.rows[0]) };
             } catch (err) {
@@ -127,7 +182,14 @@ exports.handler = async (event, context) => {
             const { id } = body;
             if (!id) throw new Error('Missing id');
 
+            // Get player name before deleting
+            const currentRes = await client.query('SELECT name FROM players WHERE id = $1', [id]);
+            const playerName = currentRes.rows[0] ? currentRes.rows[0].name : 'Unknown';
+
             await client.query('DELETE FROM players WHERE id = $1', [id]);
+
+            await logHistory('DELETE', playerName, 'Player deleted');
+
             await client.end();
             return { statusCode: 200, headers, body: JSON.stringify({ message: 'Deleted' }) };
         }
