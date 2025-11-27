@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelEditBtn = document.getElementById('cancel-edit');
 
     // State
-    let tierData = { 1: [], 2: [], 3: [], 4: [], 5: [] };
+    let tierData = { goat: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
     let isAdmin = false;
     let adminPassword = '';
     let selectedPlayerId = null; // For context menu actions
@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const players = await response.json();
 
             // Reset data
-            tierData = { 1: [], 2: [], 3: [], 4: [], 5: [] };
+            tierData = { goat: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
 
             // Group by tier
             players.forEach(p => {
@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log('Loaded local data:', localData);
 
                     // Reset data
-                    tierData = { 1: [], 2: [], 3: [], 4: [], 5: [] };
+                    tierData = { goat: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
 
                     localData.forEach(p => {
                         if (tierData[p.tier]) {
@@ -210,7 +210,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderAllTiers() {
-        for (let i = 1; i <= 5; i++) {
+        renderTier('goat');
+        for (let i = 1; i <= 6; i++) {
             renderTier(i);
         }
     }
@@ -228,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function createPlayerCard(player, index) {
         const div = document.createElement('div');
-        div.className = 'player-card';
+        div.className = `player-card tier-${player.tier}`;
         div.textContent = player.name;
         div.dataset.id = player.id;
         div.dataset.tier = player.tier;
@@ -325,7 +326,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function findPlayerById(id) {
-        for (let t = 1; t <= 5; t++) {
+        const tiers = ['goat', 1, 2, 3, 4, 5, 6];
+        for (let t of tiers) {
             const p = tierData[t].find(p => p.id == id);
             if (p) return p;
         }
@@ -411,7 +413,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function findAndRemoveLocal(id) {
-        for (let t = 1; t <= 5; t++) {
+        const tiers = ['goat', 1, 2, 3, 4, 5, 6];
+        for (let t of tiers) {
             const idx = tierData[t].findIndex(p => p.id == id);
             if (idx !== -1) {
                 return tierData[t].splice(idx, 1)[0];
