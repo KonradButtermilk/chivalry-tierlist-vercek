@@ -70,9 +70,20 @@ exports.handler = async (event, context) => {
         const body = JSON.parse(event.body || '{}');
         const ip = event.headers['client-ip'] || event.headers['x-forwarded-for'] || 'unknown';
 
-        // Netlify Geo Headers
-        const city = event.headers['x-nf-geo-city'] || null;
-        const country = event.headers['x-nf-geo-country-code'] || null;
+        // Debug Logging
+        console.log('Request Headers:', JSON.stringify(event.headers));
+
+        // Netlify Geo Headers (City is often URL encoded)
+        let city = event.headers['x-nf-geo-city'] || null;
+        if (city) {
+            try {
+                city = decodeURIComponent(city);
+            } catch (e) {
+                console.error('Failed to decode city:', e);
+            }
+        }
+
+        const country = event.headers['x-nf-geo-country-name'] || event.headers['x-nf-geo-country-code'] || null;
 
         // --- GET: Fetch all players or history ---
         if (event.httpMethod === 'GET') {

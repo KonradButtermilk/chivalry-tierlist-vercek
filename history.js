@@ -76,14 +76,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.setAlias = async function (ip) {
+        const adminPassword = localStorage.getItem('admin_password');
+        if (!adminPassword) {
+            alert('Musisz być zalogowany jako administrator, aby zmieniać aliasy. Wróć do strony głównej i się zaloguj.');
+            return;
+        }
+
         const alias = prompt('Podaj alias dla tego adresu IP (zastąpi widoczny adres):');
         if (alias) {
             try {
                 const response = await fetch(API_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-admin-password': adminPassword
+                    },
                     body: JSON.stringify({ action: 'set_alias', target_ip: ip, alias: alias })
                 });
+
+                if (response.status === 401) {
+                    alert('Błąd autoryzacji. Hasło administratora może być niepoprawne.');
+                    return;
+                }
 
                 if (response.ok) {
                     fetchHistory(); // Reload to see changes
@@ -99,16 +113,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function maskIp(ip) {
         if (!ip) return 'Unknown';
-        // Mask last two segments of IPv4: 1.2.3.4 -> 1.2.*.*
-        // Or last segments of IPv6
+        // Mask first two segments of IPv4: 1.2.3.4 -> *.*.3.4
         if (ip.includes('.')) {
             const parts = ip.split('.');
             if (parts.length === 4) {
-                return `${parts[0]}.${parts[1]}.*.*`;
+                return `*.*.${parts[2]}.${parts[3]}`;
             }
         }
-        // Simple masking for other formats
-        return ip.substring(0, Math.max(4, ip.length - 6)) + '****';
+        // Simple masking for other formats (keep last 4 chars)
+        if (ip.length > 4) {
+            return '****' + ip.substring(ip.length - 4);
+        }
+        return ip;
     }
 
     function getActionClass(action) {

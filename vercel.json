@@ -1,0 +1,23 @@
+{
+    "version": 2,
+    "builds": [
+        {
+            "src": "netlify/functions/api.js",
+            "use": "@vercel/node"
+        },
+        {
+            "src": "*.html",
+            "use": "@vercel/static"
+        }
+    ],
+    "routes": [
+        {
+            "src": "/.netlify/functions/api",
+            "dest": "/netlify/functions/api.js"
+        },
+        {
+            "src": "/api",
+            "dest": "/netlify/functions/api.js"
+        }
+    ]
+}
