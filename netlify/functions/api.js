@@ -32,12 +32,62 @@ exports.handler = async (event, context) => {
     try {
         await client.connect();
 
+        // Ensure history table exists (Lazy Migration)
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS history (
+                id SERIAL PRIMARY KEY,
+                action_type TEXT NOT NULL,
+                player_name TEXT NOT NULL,
+                details TEXT,
+                ip_address TEXT,
+                city TEXT,
+                country TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+            
+            -- Ensure columns exist if table was created before
+            DO $$ 
+            BEGIN 
+                BEGIN
+                    ALTER TABLE history ADD COLUMN city TEXT;
+                EXCEPTION
+                    WHEN duplicate_column THEN NULL;
+                END;
+                BEGIN
+                    ALTER TABLE history ADD COLUMN country TEXT;
+                EXCEPTION
+                    WHEN duplicate_column THEN NULL;
+                END;
+            END $$;
+
+            CREATE TABLE IF NOT EXISTS ip_aliases (
+                ip_address TEXT PRIMARY KEY,
+                alias TEXT NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        const body = JSON.parse(event.body || '{}');
+        const ip = event.headers['client-ip'] || event.headers['x-forwarded-for'] || 'unknown';
+
+        // Netlify Geo Headers
+        const city = event.headers['x-nf-geo-city'] || null;
+        const country = event.headers['x-nf-geo-country-code'] || null;
+
         // --- GET: Fetch all players or history ---
         if (event.httpMethod === 'GET') {
             const queryParams = event.queryStringParameters || {};
 
             if (queryParams.type === 'history') {
-                const result = await client.query('SELECT * FROM history ORDER BY created_at DESC LIMIT 100');
+                // Join history with aliases
+                const query = `
+                    SELECT h.*, a.alias 
+                    FROM history h
+                    LEFT JOIN ip_aliases a ON h.ip_address = a.ip_address
+                    ORDER BY h.created_at DESC 
+                    LIMIT 100
+                `;
+                const result = await client.query(query);
                 await client.end();
                 return {
                     statusCode: 200,
@@ -68,23 +118,35 @@ exports.handler = async (event, context) => {
             };
         }
 
-        const body = JSON.parse(event.body || '{}');
-        const ip = event.headers['client-ip'] || event.headers['x-forwarded-for'] || 'unknown';
-
         // --- Helper: Log History ---
         async function logHistory(action, playerName, details) {
             try {
                 await client.query(
-                    'INSERT INTO history (action_type, player_name, details, ip_address) VALUES ($1, $2, $3, $4)',
-                    [action, playerName, details, ip]
+                    'INSERT INTO history (action_type, player_name, details, ip_address, city, country) VALUES ($1, $2, $3, $4, $5, $6)',
+                    [action, playerName, details, ip, city, country]
                 );
             } catch (e) {
                 console.error('Failed to log history:', e);
             }
         }
 
-        // --- POST: Add Player ---
+        // --- POST: Add Player OR Set Alias ---
         if (event.httpMethod === 'POST') {
+            // Special case: Set Alias
+            if (body.action === 'set_alias') {
+                const { target_ip, alias } = body;
+                if (!target_ip || !alias) throw new Error('Missing ip or alias');
+
+                await client.query(
+                    `INSERT INTO ip_aliases (ip_address, alias) VALUES ($1, $2)
+                     ON CONFLICT (ip_address) DO UPDATE SET alias = $2`,
+                    [target_ip, alias]
+                );
+
+                await client.end();
+                return { statusCode: 200, headers, body: JSON.stringify({ message: 'Alias updated' }) };
+            }
+
             const { name, tier, description } = body;
             if (!name || tier === undefined || tier === null) throw new Error('Missing name or tier');
 

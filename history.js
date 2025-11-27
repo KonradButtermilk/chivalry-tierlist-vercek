@@ -42,16 +42,73 @@ document.addEventListener('DOMContentLoaded', () => {
             const actionClass = getActionClass(entry.action_type);
             const ipColor = getIpColor(entry.ip_address);
 
+            // Location Logic
+            let location = 'Nieznana lokalizacja';
+            if (entry.city && entry.country) {
+                location = `${entry.city}, ${entry.country}`;
+            } else if (entry.city) {
+                location = entry.city;
+            }
+
+            // IP/Alias Logic
+            const maskedIp = maskIp(entry.ip_address);
+            const displayName = entry.alias ? `${entry.alias} (${maskedIp})` : maskedIp;
+
             tr.innerHTML = `
                 <td>${date}</td>
                 <td class="${actionClass}">${entry.action_type}</td>
                 <td>${entry.player_name}</td>
                 <td>${entry.details || '-'}</td>
-                <td><span class="ip-badge" style="border-left: 3px solid ${ipColor}">${entry.ip_address}</span></td>
+                <td>
+                    <div class="user-info">
+                        <span class="ip-badge" style="border-left: 3px solid ${ipColor}" 
+                              title="Kliknij, aby nadać alias"
+                              onclick="setAlias('${entry.ip_address}')">
+                            ${displayName}
+                        </span>
+                        <span class="location-info">${location}</span>
+                    </div>
+                </td>
             `;
 
             tbodyEl.appendChild(tr);
         });
+    }
+
+    window.setAlias = async function (ip) {
+        const alias = prompt('Podaj alias dla tego adresu IP (zastąpi widoczny adres):');
+        if (alias) {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'set_alias', target_ip: ip, alias: alias })
+                });
+
+                if (response.ok) {
+                    fetchHistory(); // Reload to see changes
+                } else {
+                    alert('Błąd podczas zapisywania aliasu.');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Wystąpił błąd sieci.');
+            }
+        }
+    };
+
+    function maskIp(ip) {
+        if (!ip) return 'Unknown';
+        // Mask last two segments of IPv4: 1.2.3.4 -> 1.2.*.*
+        // Or last segments of IPv6
+        if (ip.includes('.')) {
+            const parts = ip.split('.');
+            if (parts.length === 4) {
+                return `${parts[0]}.${parts[1]}.*.*`;
+            }
+        }
+        // Simple masking for other formats
+        return ip.substring(0, Math.max(4, ip.length - 6)) + '****';
     }
 
     function getActionClass(action) {

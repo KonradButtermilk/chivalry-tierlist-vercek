@@ -68,7 +68,8 @@ h1 {
     transform: translateY(-1px);
 }
 
-.loading, .error {
+.loading,
+.error {
     text-align: center;
     padding: 20px;
     font-size: 1.2rem;
@@ -96,7 +97,8 @@ h1 {
     text-align: left;
 }
 
-.history-table th, .history-table td {
+.history-table th,
+.history-table td {
     padding: 15px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -135,4 +137,23 @@ h1 {
     font-family: monospace;
     font-size: 0.8rem;
     color: #aaa;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.ip-badge:hover {
+    background: #444;
+    color: #fff;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.location-info {
+    font-size: 0.75rem;
+    color: #888;
+    font-style: italic;
 }
