@@ -739,112 +739,64 @@ textarea:focus {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
     z-index: 2000;
     min-width: 150px;
-    padding: 5px 0;
-}
 
-.menu-item {
-    padding: 10px 15px;
-    cursor: pointer;
-    color: var(--text-color);
-    transition: background 0.2s;
-}
+    .tier-title {
+        flex: 1;
+        text-align: center;
+    }
 
-.menu-item:hover {
-    background: rgba(212, 175, 55, 0.2);
-    color: var(--accent-color);
-}
+    .tier-count {
+        font-size: 0.9rem;
+        opacity: 0.7;
+    }
 
-/* Tooltip */
-.player-card[title] {
-    position: relative;
-}
+    .collapse-btn {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #fff;
+        padding: 5px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: all 0.2s;
+    }
 
-/* === NEW FEATURES REFINED === */
+    .collapse-btn:hover {
+        background: rgba(0, 0, 0, 0.5);
+    }
 
-/* Admin Controls Layout */
-#admin-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    align-items: center;
-    width: 100%;
-    max-width: 600px;
-}
+    .tier-column.collapsed .tier-content {
+        display: none;
+    }
 
-.add-player-group {
-    display: flex;
-    gap: 10px;
-    width: 100%;
-}
+    .tier-column.collapsed .collapse-btn {
+        transform: rotate(90deg);
+    }
 
+    /* ChivalryStats Link */
+    .stats-link {
+        position: absolute;
+        top: 50%;
+        right: 8px;
+        transform: translateY(-50%);
+        background: transparent;
+        padding: 2px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: all 0.2s;
+        z-index: 10;
+        text-decoration: none;
+        opacity: 0.7;
+    }
 
+    .stats-link:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateY(-50%) scale(1.2);
+        opacity: 1;
+    }
 
-/* Tier Header Updates */
-.tier-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 15px 20px !important;
-}
-
-.tier-title {
-    flex: 1;
-    text-align: center;
-}
-
-.tier-count {
-    font-size: 0.9rem;
-    opacity: 0.7;
-}
-
-.collapse-btn {
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #fff;
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: all 0.2s;
-}
-
-.collapse-btn:hover {
-    background: rgba(0, 0, 0, 0.5);
-}
-
-.tier-column.collapsed .tier-content {
-    display: none;
-}
-
-.tier-column.collapsed .collapse-btn {
-    transform: rotate(90deg);
-}
-
-/* ChivalryStats Link */
-.stats-link {
-    position: absolute;
-    top: 50%;
-    right: 8px;
-    transform: translateY(-50%);
-    background: transparent;
-    padding: 2px;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: all 0.2s;
-    z-index: 10;
-    text-decoration: none;
-    opacity: 0.7;
-}
-
-.stats-link:hover {
-    background: rgba(255, 255, 255, 0.1);
-    transform: translateY(-50%) scale(1.2);
-    opacity: 1;
-}
-
-/* Hidden player cards (for search) */
-.player-card.search-hidden {
-    display: none;
-}
+    /* Hidden player cards (for search) */
+    .player-card.search-hidden {
+        display: none;
+    }

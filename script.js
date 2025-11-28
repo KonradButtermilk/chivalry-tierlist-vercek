@@ -64,15 +64,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const tierBoard = document.querySelector('.tier-board');
         if (isSelectionMode) {
             toggleSelectionBtn.classList.add('active');
-            toggleSelectionBtn.textContent = 'Zakończ Wybór';
-            toggleSelectionBtn.style.background = 'var(--accent-color)';
-            toggleSelectionBtn.style.color = '#000';
             tierBoard.classList.add('selection-mode');
         } else {
             toggleSelectionBtn.classList.remove('active');
-            toggleSelectionBtn.textContent = 'Tryb Wyboru (Bulk)';
-            toggleSelectionBtn.style.background = '';
-            toggleSelectionBtn.style.color = '';
             tierBoard.classList.remove('selection-mode');
 
             // Clear selections
@@ -335,6 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (player) {
                 // Copy to clipboard
                 navigator.clipboard.writeText(player.name).then(() => {
+                    alert(`Skopiowano nick: "${player.name}"\n\n1. Strona ChivalryStats otworzy się w nowej karcie.\n2. Wybierz zakładkę "Username Search".\n3. Wklej nick i kliknij Submit.`);
                     // Open ChivalryStats player lookup
                     window.open('https://chivalry2stats.com/player', '_blank');
                 });
@@ -420,16 +415,22 @@ document.addEventListener('DOMContentLoaded', () => {
         sourceTier = parseInt(this.dataset.tier);
         const id = this.dataset.id;
 
-        // If dragging an item that is NOT selected, clear selection
+        // Logic for Multi-Drag:
+        // If we are dragging an item that is ALREADY selected, we want to keep the selection (to move group).
+        // If we are dragging an item that is NOT selected, we should select it (and clear others unless Ctrl is held).
+
         if (!selectedPlayerIds.has(id)) {
-            if (!e.ctrlKey && !e.metaKey) { // Allow ctrl-drag to add to selection? Maybe too complex. Simpler: clear.
+            // Item not selected.
+            if (!e.ctrlKey && !e.metaKey) {
+                // Clear others if no modifier key
                 selectedPlayerIds.clear();
                 document.querySelectorAll('.player-card.selected').forEach(c => c.classList.remove('selected'));
             }
-            // Select the dragged item
+            // Select this one
             selectedPlayerIds.add(id);
             this.classList.add('selected');
         }
+        // If it WAS selected, we do nothing (keep the group selection).
 
         this.classList.add('dragging');
         trashZone.classList.add('visible');
@@ -439,8 +440,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const ghost = document.createElement('div');
             ghost.textContent = `${selectedPlayerIds.size} graczy`;
             ghost.style.background = '#d4af37';
+            ghost.style.color = '#000';
             ghost.style.padding = '5px 10px';
             ghost.style.borderRadius = '4px';
+            ghost.style.fontWeight = 'bold';
             ghost.style.position = 'absolute';
             ghost.style.top = '-1000px';
             document.body.appendChild(ghost);
