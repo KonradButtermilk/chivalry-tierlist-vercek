@@ -63,12 +63,15 @@ module.exports = async (req, res) => {
 
         // Request parsing
         const body = req.body || {};
-        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+        // Get the first IP from x-forwarded-for (client IP)
+        const forwarded = req.headers['x-forwarded-for'];
+        const ip = forwarded ? forwarded.split(',')[0].trim() : (req.socket.remoteAddress || 'unknown');
 
         // Debug Logging
         console.log('Request Headers:', JSON.stringify(req.headers));
+        console.log('Client IP:', ip);
 
-        // Geo Headers (Support both Vercel and Netlify headers just in case)
+        // Geo Headers (Support both Vercel and Netlify headers)
         let city = req.headers['x-vercel-ip-city'] || req.headers['x-nf-geo-city'] || null;
         if (city) {
             try {
@@ -78,7 +81,23 @@ module.exports = async (req, res) => {
             }
         }
 
-        const country = req.headers['x-vercel-ip-country'] || req.headers['x-nf-geo-country-name'] || req.headers['x-nf-geo-country-code'] || null;
+        let country = req.headers['x-vercel-ip-country'] || req.headers['x-nf-geo-country-name'] || req.headers['x-nf-geo-country-code'] || null;
+
+        // Fallback: If headers are missing, use external API
+        if ((!city || !country) && ip !== 'unknown' && ip !== '127.0.0.1') {
+            try {
+                console.log('Fetching GeoIP from ipwho.is for:', ip);
+                const geoRes = await fetch(`https://ipwho.is/${ip}`);
+                const geoData = await geoRes.json();
+
+                if (geoData.success) {
+                    city = city || geoData.city;
+                    country = country || geoData.country; // ipwho.is returns full country name
+                }
+            } catch (e) {
+                console.error('GeoIP fallback failed:', e);
+            }
+        }
 
         // --- GET: Fetch all players or history ---
         if (req.method === 'GET') {
