@@ -16,256 +16,159 @@
     <div class="app-container">
         <header>
             <h1>Chivalry 2 Tier List</h1>
-            <span class="tier-count" id="count-0">(0)</span>
-    </div>
-    <div class="tier-content" id="tier-0-list">
-        <!-- Players will go here -->
-    </div>
-    </div>
-    <div class="tier-column" data-tier="1">
-        <div class="tier-header tier-1">
-            <button class="collapse-btn" data-tier="1">−</button>
-            <span class="tier-title">Tier 1</span>
-            <span class="tier-count" id="count-1">(0)</span>
-        </div>
-        <div class="tier-content" id="tier-1-list"></div>
-    </div>
-    <div class="tier-column" data-tier="2">
-        <div class="tier-header tier-2">
-            <button class="collapse-btn" data-tier="2">−</button>
-            <span class="tier-title">Tier 2</span>
-            <span class="tier-count" id="count-2">(0)</span>
-        </div>
-        <div class="tier-content" id="tier-2-list"></div>
-    </div>
-    <div class="tier-column" data-tier="3">
-        <div class="tier-header tier-3">
-            <button class="collapse-btn" data-tier="3">−</button>
-            <span class="tier-title">Tier 3</span>
-            <span class="tier-count" id="count-3">(0)</span>
-        </div>
-        <div class="tier-content" id="tier-3-list"></div>
-    </div>
-    <div class="tier-column" data-tier="4">
-        <div class="tier-header tier-4">
-            <button class="collapse-btn" data-tier="4">−</button>
-            <span class="tier-title">Tier 4</span>
-            <span class="tier-count" id="count-4">(0)</span>
-        </div>
-        <div class="tier-content" id="tier-4-list"></div>
-    </div>
-    <div class="tier-column" data-tier="5">
-        <div class="tier-header tier-5">
-            <button class="collapse-btn" data-tier="5">−</button>
-            <span class="tier-title">Tier 5</span>
-            <span class="tier-count" id="count-5">(0)</span>
-        </div>
-        <div class="tier-content" id="tier-5-list"></div>
-    </div>
-    <div class="tier-column" data-tier="6">
-        <div class="tier-header tier-6">
-            <button class="collapse-btn" data-tier="6">−</button>
-            <span class="tier-title">Tier 6</span>
-            <span class="tier-count" id="count-6">(0)</span>
-        </div>
-        <div class="tier-content" id="tier-6-list"></div>
-    </div>
-    </main>
+            <div class="auth-controls">
+                <button id="history-btn" class="secondary-btn"
+                    onclick="window.location.href='history.html'">Historia</button>
+                <button id="login-btn" class="secondary-btn">Log In</button>
+                <button id="logout-btn" class="secondary-btn hidden">Log Out</button>
+            </div>
 
-    <div id="trash-zone" class="trash-zone hidden">
-        <span>🗑️ Upuść tutaj, aby usunąć</span>
-    </div>
+            <!-- Admin Controls -->
+            <div class="controls hidden" id="admin-controls">
+                <div class="add-player-group">
+                    <input type="text" id="new-player-name" placeholder="Nazwa gracza...">
+                    <button id="add-player-btn">Dodaj Gracza</button>
+                </div>
 
-    <!-- Context Menu -->
-    <div id="context-menu" class="context-menu hidden">
-        <div class="menu-item" id="ctx-edit">✏️ Edytuj</div>
-        <div class="menu-item" id="ctx-delete">🗑️ Usuń</div>
-    </div>
+                <div class="admin-tools">
+                    <button id="toggle-selection-mode" class="secondary-btn">Tryb Wyboru (Bulk)</button>
+                </div>
+            </div>
 
-    <!-- Edit Player Modal -->
-    <div id="edit-modal" class="modal hidden">
-        <div class="modal-content">
-            <h2>Edytuj Gracza</h2>
-            <input type="text" id="edit-name" placeholder="Nazwa gracza">
-            <textarea id="edit-desc" placeholder="Opis (opcjonalnie)" rows="4"></textarea>
-            <div class="modal-actions">
-                <button id="save-edit">Zapisz</button>
-                <button id="cancel-edit" class="secondary-btn">Anuluj</button>
+            <!-- Floating Bulk Actions Bar (Hidden by default) -->
+            <div id="bulk-actions-bar" class="bulk-actions-bar hidden">
+                <div class="bulk-info">
+                    <span id="selected-count">0</span> zaznaczonych
+                </div>
+                <div class="bulk-actions">
+                    <select id="bulk-move-select" class="bulk-select">
+                        <option value="">Przenieś do...</option>
+                        <option value="0">GOAT</option>
+                        <option value="1">Tier 1</option>
+                        <option value="2">Tier 2</option>
+                        <option value="3">Tier 3</option>
+                        <option value="4">Tier 4</option>
+                        <option value="5">Tier 5</option>
+                        <option value="6">Tier 6</option>
+                    </select>
+                    <button id="bulk-delete-btn" class="bulk-delete-btn">🗑️ Usuń</button>
+                    <button id="cancel-selection-mode" class="close-btn">✕</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Statistics Panel (No Search) -->
+        <div class="utility-panel">
+            <div class="statistics-panel">
+                <div class="stat-item">
+                    <span class="stat-label">Łącznie graczy:</span>
+                    <span class="stat-value" id="total-count">0</span>
+                </div>
+                <div class="tier-stats" id="tier-stats">
+                    <!-- Tier stats will be inserted here -->
+                </div>
+            </div>
+        </div>
+
+        <main class="tier-board">
+            <div class="tier-column" data-tier="0">
+                <div class="tier-header tier-0">
+                    <button class="collapse-btn" data-tier="0">−</button>
+                    <span class="tier-title">GOAT</span>
+                    <span class="tier-count" id="count-0">(0)</span>
+                </div>
+                <div class="tier-content" id="tier-0-list">
+                    <!-- Players will go here -->
+                </div>
+            </div>
+            <div class="tier-column" data-tier="1">
+                <div class="tier-header tier-1">
+                    <button class="collapse-btn" data-tier="1">−</button>
+                    <span class="tier-title">Tier 1</span>
+                    <span class="tier-count" id="count-1">(0)</span>
+                </div>
+                <div class="tier-content" id="tier-1-list"></div>
+            </div>
+            <div class="tier-column" data-tier="2">
+                <div class="tier-header tier-2">
+                    <button class="collapse-btn" data-tier="2">−</button>
+                    <span class="tier-title">Tier 2</span>
+                    <span class="tier-count" id="count-2">(0)</span>
+                </div>
+                <div class="tier-content" id="tier-2-list"></div>
+            </div>
+            <div class="tier-column" data-tier="3">
+                <div class="tier-header tier-3">
+                    <button class="collapse-btn" data-tier="3">−</button>
+                    <span class="tier-title">Tier 3</span>
+                    <span class="tier-count" id="count-3">(0)</span>
+                </div>
+                <div class="tier-content" id="tier-3-list"></div>
+            </div>
+            <div class="tier-column" data-tier="4">
+                <div class="tier-header tier-4">
+                    <button class="collapse-btn" data-tier="4">−</button>
+                    <span class="tier-title">Tier 4</span>
+                    <span class="tier-count" id="count-4">(0)</span>
+                </div>
+                <div class="tier-content" id="tier-4-list"></div>
+            </div>
+            <div class="tier-column" data-tier="5">
+                <div class="tier-header tier-5">
+                    <button class="collapse-btn" data-tier="5">−</button>
+                    <span class="tier-title">Tier 5</span>
+                    <span class="tier-count" id="count-5">(0)</span>
+                </div>
+                <div class="tier-content" id="tier-5-list"></div>
+            </div>
+            <div class="tier-column" data-tier="6">
+                <div class="tier-header tier-6">
+                    <button class="collapse-btn" data-tier="6">−</button>
+                    <span class="tier-title">Tier 6</span>
+                    <span class="tier-count" id="count-6">(0)</span>
+                </div>
+                <div class="tier-content" id="tier-6-list"></div>
+            </div>
+        </main>
+
+        <div id="trash-zone" class="trash-zone hidden">
+            <span>🗑️ Upuść tutaj, aby usunąć</span>
+        </div>
+
+        <!-- Context Menu -->
+        <div id="context-menu" class="context-menu hidden">
+            <div class="menu-item" id="ctx-edit">✏️ Edytuj</div>
+            <div class="menu-item" id="ctx-delete">🗑️ Usuń</div>
+        </div>
+
+        <!-- Edit Player Modal -->
+        <div id="edit-modal" class="modal hidden">
+            <div class="modal-content">
+                <h2>Edytuj Gracza</h2>
+                <input type="text" id="edit-name" placeholder="Nazwa gracza">
+                <textarea id="edit-desc" placeholder="Opis (opcjonalnie)" rows="4"></textarea>
+                <div class="modal-actions">
+                    <button id="save-edit">Zapisz</button>
+                    <button id="cancel-edit" class="secondary-btn">Anuluj</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Login Modal -->
+        <div id="login-modal" class="modal hidden">
+            <div class="modal-content">
+                <h2>Admin Login</h2>
+                <input type="password" id="admin-password" placeholder="Hasło administratora">
+                <div class="modal-actions">
+                    <button id="submit-login">Zaloguj</button>
+                    <button id="cancel-login" class="secondary-btn">Anuluj</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Login Modal -->
-    <div id="login-modal" class="modal hidden">
-        <div class="modal-content">
-            <h2>Admin Login</h2>
-            <input type="password" id="admin-password" placeholder="Hasło administratora">
-            <div class="modal-actions">
-                <button id="submit-login">Zaloguj</button>
-                <!DOCTYPE html>
-                <html lang="pl">
+    <script src="script.js"></script>
+    <script src="enhancements.js"></script>
+</body>
 
-                <head>
-                    <meta charset="UTF-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>Chivalry 2 Tier List</title>
-                    <link rel="stylesheet" href="style.css">
-                    <link rel="preconnect" href="https://fonts.googleapis.com">
-                    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-                    <link
-                        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@400;700&display=swap"
-                        rel="stylesheet">
-                </head>
-
-                <body>
-                    <div class="app-container">
-                        <header>
-                            <h1>Chivalry 2 Tier List</h1>
-                            <div class="auth-controls">
-                                <button id="history-btn" class="secondary-btn"
-                                    onclick="window.location.href='history.html'">Historia</button>
-                                <button id="login-btn" class="secondary-btn">Log In</button>
-                                <button id="logout-btn" class="secondary-btn hidden">Log Out</button>
-                            </div>
-                            <div class="controls hidden" id="admin-controls">
-                                <input type="text" id="new-player-name" placeholder="Nazwa gracza...">
-                                <button id="add-player-btn">Dodaj Gracza</button>
-                            </div>
-                            <!-- Bulk Actions (Admin Only) -->
-                            <div class="bulk-controls hidden" id="bulk-controls">
-                                <button id="select-all-btn" class="bulk-btn">✓ Zaznacz wszystkie</button>
-                                <button id="deselect-all-btn" class="bulk-btn">✗ Odznacz wszystkie</button>
-                                <select id="bulk-move-select" class="bulk-select">
-                                    <option value="">Przenieś zaznaczone do...</option>
-                                    <option value="0">GOAT</option>
-                                    <option value="1">Tier 1</option>
-                                    <option value="2">Tier 2</option>
-                                    <option value="3">Tier 3</option>
-                                    <option value="4">Tier 4</option>
-                                    <option value="5">Tier 5</option>
-                                    <option value="6">Tier 6</option>
-                                </select>
-                                <button id="bulk-delete-btn" class="bulk-btn bulk-delete">🗑️ Usuń
-                                    zaznaczone</button>
-                            </div>
-                        </header>
-
-                        <!-- Search and Statistics -->
-                        <div class="utility-panel">
-                            <div class="search-container">
-                                <input type="text" id="player-search" placeholder="🔍 Szukaj gracza po nazwie..." />
-                                <button id="search-reset" class="reset-btn">✕</button>
-                            </div>
-                            <div class="statistics-panel">
-                                <div class="stat-item">
-                                    <span class="stat-label">Łącznie graczy:</span>
-                                    <span class="stat-value" id="total-count">0</span>
-                                </div>
-                                <div class="tier-stats" id="tier-stats">
-                                    <!-- Tier stats will be inserted here -->
-                                </div>
-                            </div>
-                        </div>
-
-                        <main class="tier-board">
-                            <div class="tier-column" data-tier="0">
-                                <div class="tier-header tier-0">
-                                    <button class="collapse-btn" data-tier="0">−</button>
-                                    <span class="tier-title">GOAT</span>
-                                    <span class="tier-count" id="count-0">(0)</span>
-                                </div>
-                                <div class="tier-content" id="tier-0-list">
-                                    <!-- Players will go here -->
-                                </div>
-                            </div>
-                            <div class="tier-column" data-tier="1">
-                                <div class="tier-header tier-1">
-                                    <button class="collapse-btn" data-tier="1">−</button>
-                                    <span class="tier-title">Tier 1</span>
-                                    <span class="tier-count" id="count-1">(0)</span>
-                                </div>
-                                <div class="tier-content" id="tier-1-list"></div>
-                            </div>
-                            <div class="tier-column" data-tier="2">
-                                <div class="tier-header tier-2">
-                                    <button class="collapse-btn" data-tier="2">−</button>
-                                    <span class="tier-title">Tier 2</span>
-                                    <span class="tier-count" id="count-2">(0)</span>
-                                </div>
-                                <div class="tier-content" id="tier-2-list"></div>
-                            </div>
-                            <div class="tier-column" data-tier="3">
-                                <div class="tier-header tier-3">
-                                    <button class="collapse-btn" data-tier="3">−</button>
-                                    <span class="tier-title">Tier 3</span>
-                                    <span class="tier-count" id="count-3">(0)</span>
-                                </div>
-                                <div class="tier-content" id="tier-3-list"></div>
-                            </div>
-                            <div class="tier-column" data-tier="4">
-                                <div class="tier-header tier-4">
-                                    <button class="collapse-btn" data-tier="4">−</button>
-                                    <span class="tier-title">Tier 4</span>
-                                    <span class="tier-count" id="count-4">(0)</span>
-                                </div>
-                                <div class="tier-content" id="tier-4-list"></div>
-                            </div>
-                            <div class="tier-column" data-tier="5">
-                                <div class="tier-header tier-5">
-                                    <button class="collapse-btn" data-tier="5">−</button>
-                                    <span class="tier-title">Tier 5</span>
-                                    <span class="tier-count" id="count-5">(0)</span>
-                                </div>
-                                <div class="tier-content" id="tier-5-list"></div>
-                            </div>
-                            <div class="tier-column" data-tier="6">
-                                <div class="tier-header tier-6">
-                                    <button class="collapse-btn" data-tier="6">−</button>
-                                    <span class="tier-title">Tier 6</span>
-                                    <span class="tier-count" id="count-6">(0)</span>
-                                </div>
-                                <div class="tier-content" id="tier-6-list"></div>
-                            </div>
-                        </main>
-
-                        <div id="trash-zone" class="trash-zone hidden">
-                            <span>🗑️ Upuść tutaj, aby usunąć</span>
-                        </div>
-
-                        <!-- Context Menu -->
-                        <div id="context-menu" class="context-menu hidden">
-                            <div class="menu-item" id="ctx-edit">✏️ Edytuj</div>
-                            <div class="menu-item" id="ctx-delete">🗑️ Usuń</div>
-                        </div>
-
-                        <!-- Edit Player Modal -->
-                        <div id="edit-modal" class="modal hidden">
-                            <div class="modal-content">
-                                <h2>Edytuj Gracza</h2>
-                                <input type="text" id="edit-name" placeholder="Nazwa gracza">
-                                <textarea id="edit-desc" placeholder="Opis (opcjonalnie)" rows="4"></textarea>
-                                <div class="modal-actions">
-                                    <button id="save-edit">Zapisz</button>
-                                    <button id="cancel-edit" class="secondary-btn">Anuluj</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Login Modal -->
-                        <div id="login-modal" class="modal hidden">
-                            <div class="modal-content">
-                                <h2>Admin Login</h2>
-                                <input type="password" id="admin-password" placeholder="Hasło administratora">
-                                <div class="modal-actions">
-                                    <button id="submit-login">Zaloguj</button>
-                                    <button id="cancel-login" class="secondary-btn">Anuluj</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <script src="script.js"></script>
-                    <script src="enhancements.js"></script>
-                </body>
-
-                </html>
+</html>
