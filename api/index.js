@@ -244,16 +244,33 @@ module.exports = async (req, res) => {
             }
         }
 
-        // --- DELETE: Remove Player ---
+        // --- DELETE: Remove Player OR Delete History ---
         if (req.method === 'DELETE') {
-            const { id } = body;
-            if (!id) throw new Error('Missing id');
+            const { type, id, clear } = req.query;
+
+            // Delete single history entry
+            if (type === 'history' && id) {
+                await client.query('DELETE FROM history WHERE id = $1', [id]);
+                await client.end();
+                return res.status(200).json({ message: 'History entry deleted' });
+            }
+
+            // Clear all history
+            if (type === 'history' && clear === 'all') {
+                await client.query('DELETE FROM history');
+                await client.end();
+                return res.status(200).json({ message: 'History cleared' });
+            }
+
+            // Delete player (original logic)
+            const { id: playerId } = body;
+            if (!playerId) throw new Error('Missing id');
 
             // Get player name before deleting
-            const currentRes = await client.query('SELECT name FROM players WHERE id = $1', [id]);
+            const currentRes = await client.query('SELECT name FROM players WHERE id = $1', [playerId]);
             const playerName = currentRes.rows[0] ? currentRes.rows[0].name : 'Unknown';
 
-            await client.query('DELETE FROM players WHERE id = $1', [id]);
+            await client.query('DELETE FROM players WHERE id = $1', [playerId]);
 
             await logHistory('DELETE', playerName, 'Player deleted');
 

@@ -16,8 +16,27 @@
     <div class="app-container">
         <header>
             <h1>Historia Zmian</h1>
-            <button id="back-btn" class="secondary-btn" onclick="window.location.href='index.html'">← Powrót</button>
+            <a href="index.html" class="back-link">← Powrót do listy</a>
         </header>
+
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <label for="filter-action">Filtruj:</label>
+                <select id="filter-action" class="filter-select">
+                    <option value="ALL">Wszystkie</option>
+                    <option value="ADD">Dodane</option>
+                    <option value="UPDATE">Zaktualizowane</option>
+                    <option value="DELETE">Usunięte</option>
+                </select>
+
+                <input type="text" id="search-player" class="search-input" placeholder="Szukaj po nazwie gracza...">
+            </div>
+
+            <div class="toolbar-right">
+                <button id="export-csv" class="btn-export">Eksport CSV</button>
+                <button id="clear-history" class="btn-clear" style="display: none;">Wyczyść Historię</button>
+            </div>
+        </div>
 
         <main>
             <div id="loading" class="loading">Ładowanie historii...</div>
@@ -31,7 +50,8 @@
                             <th>Akcja</th>
                             <th>Gracz</th>
                             <th>Zmiana</th>
-                            <th>IP Address</th>
+                            <th>Użytkownik</th>
+                            <th class="admin-col">Akcje</th>
                         </tr>
                     </thead>
                     <tbody id="history-body">
