@@ -12,7 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const adminPasswordInput = document.getElementById('admin-password');
     const submitLoginBtn = document.getElementById('submit-login');
     const cancelLoginBtn = document.getElementById('cancel-login');
-    const toggleSelectionBtn = document.getElementById('toggle-selection-mode');
 
     // Context Menu & Edit Modal
     const contextMenu = document.getElementById('context-menu');
@@ -32,7 +31,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedPlayerId = null; // For context menu actions
 
     // Bulk Selection State
-    let isSelectionMode = false;
     let selectedPlayerIds = new Set();
 
     // --- Initialization ---
@@ -44,6 +42,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!contextMenu.contains(e.target)) {
             contextMenu.classList.add('hidden');
         }
+        // Clear selection if clicking on background (not on a card or control)
+        if (isAdmin && !e.target.closest('.player-card') && !e.target.closest('.controls') && !e.target.closest('.modal')) {
+            selectedPlayerIds.clear();
+            document.querySelectorAll('.player-card.selected').forEach(c => c.classList.remove('selected'));
+        }
     });
 
     document.addEventListener('contextmenu', (e) => {
@@ -53,29 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
         }
     });
-
-    // Toggle Selection Mode
-    toggleSelectionBtn?.addEventListener('click', () => {
-        isSelectionMode = !isSelectionMode;
-        updateSelectionModeUI();
-    });
-
-    function updateSelectionModeUI() {
-        const tierBoard = document.querySelector('.tier-board');
-        if (isSelectionMode) {
-            toggleSelectionBtn.classList.add('active');
-            tierBoard.classList.add('selection-mode');
-        } else {
-            toggleSelectionBtn.classList.remove('active');
-            tierBoard.classList.remove('selection-mode');
-
-            // Clear selections
-            selectedPlayerIds.clear();
-            document.querySelectorAll('.player-card.selected').forEach(card => {
-                card.classList.remove('selected');
-            });
-        }
-    }
 
     // --- Auth Logic ---
     function checkAuth() {
@@ -286,12 +266,13 @@ document.addEventListener('DOMContentLoaded', () => {
             div.addEventListener('dragstart', handleDragStart);
             div.addEventListener('dragend', handleDragEnd);
 
-            // Click handling for Selection Mode
+            // Click handling for Selection (Standard Logic)
             div.addEventListener('click', (e) => {
-                if (isSelectionMode) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const id = String(player.id);
+                e.stopPropagation(); // Prevent background click from clearing
+                const id = String(player.id);
+
+                if (e.ctrlKey || e.metaKey) {
+                    // Toggle selection
                     if (selectedPlayerIds.has(id)) {
                         selectedPlayerIds.delete(id);
                         div.classList.remove('selected');
@@ -299,12 +280,26 @@ document.addEventListener('DOMContentLoaded', () => {
                         selectedPlayerIds.add(id);
                         div.classList.add('selected');
                     }
+                } else {
+                    // Single select (clear others)
+                    selectedPlayerIds.clear();
+                    document.querySelectorAll('.player-card.selected').forEach(c => c.classList.remove('selected'));
+                    selectedPlayerIds.add(id);
+                    div.classList.add('selected');
                 }
             });
 
             // Context Menu Trigger
             div.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
+                // If right-clicking an unselected item, select it (exclusive)
+                const id = String(player.id);
+                if (!selectedPlayerIds.has(id)) {
+                    selectedPlayerIds.clear();
+                    document.querySelectorAll('.player-card.selected').forEach(c => c.classList.remove('selected'));
+                    selectedPlayerIds.add(id);
+                    div.classList.add('selected');
+                }
                 showContextMenu(e, player);
             });
         } else {
@@ -496,7 +491,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Clear selection after move
                 selectedPlayerIds.clear();
-                if (isSelectionMode) updateSelectionModeUI(); // Refresh UI
             }
         });
     });
@@ -528,7 +522,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 selectedPlayerIds.clear();
-                if (isSelectionMode) updateSelectionModeUI();
             }
         }
     });
