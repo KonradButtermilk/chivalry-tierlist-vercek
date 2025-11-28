@@ -1,27 +1,21 @@
 const { Client } = require('pg');
 
-exports.handler = async (event, context) => {
-    // CORS headers to allow requests from anywhere (or restrict to your domain)
-    const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, x-admin-password',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
-    };
+module.exports = async (req, res) => {
+    // CORS headers
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-password');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
 
     // Handle preflight OPTIONS request
-    if (event.httpMethod === 'OPTIONS') {
-        return { statusCode: 200, headers, body: '' };
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
     }
 
     // Check for missing env var
-    const connectionString = process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL;
+    const connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
         console.error('Error: DATABASE_URL is missing');
-        return {
-            statusCode: 500,
-            headers,
-            body: JSON.stringify({ error: 'Configuration Error: DATABASE_URL is missing in Netlify settings.' })
-        };
+        return res.status(500).json({ error: 'Configuration Error: DATABASE_URL is missing.' });
     }
 
     const client = new Client({
@@ -67,14 +61,15 @@ exports.handler = async (event, context) => {
             );
         `);
 
-        const body = JSON.parse(event.body || '{}');
-        const ip = event.headers['client-ip'] || event.headers['x-forwarded-for'] || 'unknown';
+        // Request parsing
+        const body = req.body || {};
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
 
         // Debug Logging
-        console.log('Request Headers:', JSON.stringify(event.headers));
+        console.log('Request Headers:', JSON.stringify(req.headers));
 
-        // Netlify Geo Headers (City is often URL encoded)
-        let city = event.headers['x-nf-geo-city'] || null;
+        // Geo Headers (Support both Vercel and Netlify headers just in case)
+        let city = req.headers['x-vercel-ip-city'] || req.headers['x-nf-geo-city'] || null;
         if (city) {
             try {
                 city = decodeURIComponent(city);
@@ -83,13 +78,13 @@ exports.handler = async (event, context) => {
             }
         }
 
-        const country = event.headers['x-nf-geo-country-name'] || event.headers['x-nf-geo-country-code'] || null;
+        const country = req.headers['x-vercel-ip-country'] || req.headers['x-nf-geo-country-name'] || req.headers['x-nf-geo-country-code'] || null;
 
         // --- GET: Fetch all players or history ---
-        if (event.httpMethod === 'GET') {
-            const queryParams = event.queryStringParameters || {};
+        if (req.method === 'GET') {
+            const { type } = req.query;
 
-            if (queryParams.type === 'history') {
+            if (type === 'history') {
                 // Join history with aliases
                 const query = `
                     SELECT h.*, a.alias 
@@ -100,33 +95,21 @@ exports.handler = async (event, context) => {
                 `;
                 const result = await client.query(query);
                 await client.end();
-                return {
-                    statusCode: 200,
-                    headers,
-                    body: JSON.stringify(result.rows)
-                };
+                return res.status(200).json(result.rows);
             }
 
             const result = await client.query('SELECT * FROM players ORDER BY tier ASC, name ASC');
             await client.end();
-            return {
-                statusCode: 200,
-                headers,
-                body: JSON.stringify(result.rows)
-            };
+            return res.status(200).json(result.rows);
         }
 
         // --- AUTH CHECK for Write Operations ---
         const adminPassword = process.env.ADMIN_PASSWORD;
-        const userPassword = event.headers['x-admin-password'];
+        const userPassword = req.headers['x-admin-password'];
 
         if (!adminPassword || userPassword !== adminPassword) {
             await client.end();
-            return {
-                statusCode: 401,
-                headers,
-                body: JSON.stringify({ error: 'Unauthorized: Incorrect or missing password' })
-            };
+            return res.status(401).json({ error: 'Unauthorized: Incorrect or missing password' });
         }
 
         // --- Helper: Log History ---
@@ -142,7 +125,7 @@ exports.handler = async (event, context) => {
         }
 
         // --- POST: Add Player OR Set Alias ---
-        if (event.httpMethod === 'POST') {
+        if (req.method === 'POST') {
             // Special case: Set Alias
             if (body.action === 'set_alias') {
                 const { target_ip, alias } = body;
@@ -155,7 +138,7 @@ exports.handler = async (event, context) => {
                 );
 
                 await client.end();
-                return { statusCode: 200, headers, body: JSON.stringify({ message: 'Alias updated' }) };
+                return res.status(200).json({ message: 'Alias updated' });
             }
 
             const { name, tier, description } = body;
@@ -170,22 +153,18 @@ exports.handler = async (event, context) => {
                 await logHistory('ADD', name, `Added to Tier ${tier}`);
 
                 await client.end();
-                return { statusCode: 201, headers, body: JSON.stringify(result.rows[0]) };
+                return res.status(201).json(result.rows[0]);
             } catch (err) {
                 if (err.code === '23505') { // Unique violation
                     await client.end();
-                    return {
-                        statusCode: 409,
-                        headers,
-                        body: JSON.stringify({ error: 'Player with this name already exists.' })
-                    };
+                    return res.status(409).json({ error: 'Player with this name already exists.' });
                 }
                 throw err;
             }
         }
 
         // --- PUT: Update Player Tier/Info ---
-        if (event.httpMethod === 'PUT') {
+        if (req.method === 'PUT') {
             const { id, tier, name, description } = body;
             if (!id) throw new Error('Missing id');
 
@@ -195,7 +174,7 @@ exports.handler = async (event, context) => {
 
             if (!currentPlayer) {
                 await client.end();
-                return { statusCode: 404, headers, body: JSON.stringify({ error: 'Player not found' }) };
+                return res.status(404).json({ error: 'Player not found' });
             }
 
             // Dynamic update query
@@ -222,7 +201,7 @@ exports.handler = async (event, context) => {
 
             if (updates.length === 0) {
                 await client.end();
-                return { statusCode: 400, headers, body: JSON.stringify({ error: 'No fields to update' }) };
+                return res.status(400).json({ error: 'No fields to update' });
             }
 
             values.push(id);
@@ -236,22 +215,18 @@ exports.handler = async (event, context) => {
                 }
 
                 await client.end();
-                return { statusCode: 200, headers, body: JSON.stringify(result.rows[0]) };
+                return res.status(200).json(result.rows[0]);
             } catch (err) {
                 if (err.code === '23505') {
                     await client.end();
-                    return {
-                        statusCode: 409,
-                        headers,
-                        body: JSON.stringify({ error: 'Player with this name already exists.' })
-                    };
+                    return res.status(409).json({ error: 'Player with this name already exists.' });
                 }
                 throw err;
             }
         }
 
         // --- DELETE: Remove Player ---
-        if (event.httpMethod === 'DELETE') {
+        if (req.method === 'DELETE') {
             const { id } = body;
             if (!id) throw new Error('Missing id');
 
@@ -264,22 +239,18 @@ exports.handler = async (event, context) => {
             await logHistory('DELETE', playerName, 'Player deleted');
 
             await client.end();
-            return { statusCode: 200, headers, body: JSON.stringify({ message: 'Deleted' }) };
+            return res.status(200).json({ message: 'Deleted' });
         }
 
         await client.end();
-        return { statusCode: 405, headers, body: 'Method Not Allowed' };
+        return res.status(405).send('Method Not Allowed');
 
     } catch (error) {
         console.error('Database Error:', error);
         try { await client.end(); } catch (e) { } // Ignore close errors
-        return {
-            statusCode: 500,
-            headers,
-            body: JSON.stringify({
-                error: 'Database Error',
-                details: error.message
-            })
-        };
+        return res.status(500).json({
+            error: 'Database Error',
+            details: error.message
+        });
     }
 };
