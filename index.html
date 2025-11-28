@@ -26,39 +26,98 @@
                 <input type="text" id="new-player-name" placeholder="Nazwa gracza...">
                 <button id="add-player-btn">Dodaj Gracza</button>
             </div>
+            <!-- Bulk Actions (Admin Only) -->
+            <div class="bulk-controls hidden" id="bulk-controls">
+                <button id="select-all-btn" class="bulk-btn">✓ Zaznacz wszystkie</button>
+                <button id="deselect-all-btn" class="bulk-btn">✗ Odznacz wszystkie</button>
+                <select id="bulk-move-select" class="bulk-select">
+                    <option value="">Przenieś zaznaczone do...</option>
+                    <option value="0">GOAT</option>
+                    <option value="1">Tier 1</option>
+                    <option value="2">Tier 2</option>
+                    <option value="3">Tier 3</option>
+                    <option value="4">Tier 4</option>
+                    <option value="5">Tier 5</option>
+                    <option value="6">Tier 6</option>
+                </select>
+                <button id="bulk-delete-btn" class="bulk-btn bulk-delete">🗑️ Usuń zaznaczone</button>
+            </div>
         </header>
+
+        <!-- Search and Statistics -->
+        <div class="utility-panel">
+            <div class="search-container">
+                <input type="text" id="player-search" placeholder="🔍 Szukaj gracza po nazwie..." />
+                <button id="search-reset" class="reset-btn">✕</button>
+            </div>
+            <div class="statistics-panel">
+                <div class="stat-item">
+                    <span class="stat-label">Łącznie graczy:</span>
+                    <span class="stat-value" id="total-count">0</span>
+                </div>
+                <div class="tier-stats" id="tier-stats">
+                    <!-- Tier stats will be inserted here -->
+                </div>
+            </div>
+        </div>
 
         <main class="tier-board">
             <div class="tier-column" data-tier="0">
-                <div class="tier-header tier-0">GOAT</div>
-                <div class="tier-content" id="tier-0-list">
-                    <!-- Players will kgo here -->
+                <div class="tier-header tier-0">
+                    <button class="collapse-btn" data-tier="0">−</button>
+                    <span class="tier-title">GOAT</span>
+                    <span class="tier-count" id="count-0">(0)</span>
                 </div>
-            </div>
-            <div class="tier-column" data-tier="1">
-                <div class="tier-header tier-1">Tier 1</div>
-                <div class="tier-content" id="tier-1-list">
+                <div class="tier-content" id="tier-0-list">
                     <!-- Players will go here -->
                 </div>
             </div>
+            <div class="tier-column" data-tier="1">
+                <div class="tier-header tier-1">
+                    <button class="collapse-btn" data-tier="1">−</button>
+                    <span class="tier-title">Tier 1</span>
+                    <span class="tier-count" id="count-1">(0)</span>
+                </div>
+                <div class="tier-content" id="tier-1-list"></div>
+            </div>
             <div class="tier-column" data-tier="2">
-                <div class="tier-header tier-2">Tier 2</div>
+                <div class="tier-header tier-2">
+                    <button class="collapse-btn" data-tier="2">−</button>
+                    <span class="tier-title">Tier 2</span>
+                    <span class="tier-count" id="count-2">(0)</span>
+                </div>
                 <div class="tier-content" id="tier-2-list"></div>
             </div>
             <div class="tier-column" data-tier="3">
-                <div class="tier-header tier-3">Tier 3</div>
+                <div class="tier-header tier-3">
+                    <button class="collapse-btn" data-tier="3">−</button>
+                    <span class="tier-title">Tier 3</span>
+                    <span class="tier-count" id="count-3">(0)</span>
+                </div>
                 <div class="tier-content" id="tier-3-list"></div>
             </div>
             <div class="tier-column" data-tier="4">
-                <div class="tier-header tier-4">Tier 4</div>
+                <div class="tier-header tier-4">
+                    <button class="collapse-btn" data-tier="4">−</button>
+                    <span class="tier-title">Tier 4</span>
+                    <span class="tier-count" id="count-4">(0)</span>
+                </div>
                 <div class="tier-content" id="tier-4-list"></div>
             </div>
             <div class="tier-column" data-tier="5">
-                <div class="tier-header tier-5">Tier 5</div>
+                <div class="tier-header tier-5">
+                    <button class="collapse-btn" data-tier="5">−</button>
+                    <span class="tier-title">Tier 5</span>
+                    <span class="tier-count" id="count-5">(0)</span>
+                </div>
                 <div class="tier-content" id="tier-5-list"></div>
             </div>
             <div class="tier-column" data-tier="6">
-                <div class="tier-header tier-6">Tier 6</div>
+                <div class="tier-header tier-6">
+                    <button class="collapse-btn" data-tier="6">−</button>
+                    <span class="tier-title">Tier 6</span>
+                    <span class="tier-count" id="count-6">(0)</span>
+                </div>
                 <div class="tier-content" id="tier-6-list"></div>
             </div>
         </main>
