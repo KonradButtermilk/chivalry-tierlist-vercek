@@ -229,7 +229,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function createPlayerCard(player, index) {
         const div = document.createElement('div');
         div.className = `player-card tier-${player.tier}`;
-        div.textContent = player.name;
+
+        // Player Name
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'player-name';
+        nameSpan.textContent = player.name;
+        div.appendChild(nameSpan);
+
         div.dataset.id = player.id;
         div.dataset.tier = player.tier;
 
@@ -238,11 +244,32 @@ document.addEventListener('DOMContentLoaded', () => {
             div.title = player.description;
         }
 
+        // ChivalryStats Link (Always visible)
+        const statsLink = document.createElement('span');
+        statsLink.className = 'stats-link';
+        statsLink.innerHTML = '📊';
+        statsLink.title = 'Zobacz statystyki na Chivalry2Stats.com';
+        statsLink.onclick = (e) => {
+            e.stopPropagation();
+            if (window.openChivalryStats) {
+                window.openChivalryStats(player.name);
+            }
+        };
+        div.appendChild(statsLink);
+
         if (isAdmin) {
             div.draggable = true;
             div.style.cursor = 'grab';
             div.addEventListener('dragstart', handleDragStart);
             div.addEventListener('dragend', handleDragEnd);
+
+            // Bulk Action Checkbox
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'player-checkbox';
+            checkbox.dataset.playerId = player.id;
+            checkbox.onclick = (e) => e.stopPropagation(); // Prevent drag/click interference
+            div.appendChild(checkbox);
 
             // Context Menu Trigger
             div.addEventListener('contextmenu', (e) => {

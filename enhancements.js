@@ -38,12 +38,12 @@ function filterPlayers(searchTerm) {
     playerCards.forEach(card => {
         const playerName = card.querySelector('.player-name')?.textContent.toLowerCase() || '';
 
-        if (search Term === '' || playerName.includes(searchTerm)) {
-        card.classList.remove('search-hidden');
-    } else {
-        card.classList.add('search-hidden');
-    }
-});
+        if (searchTerm === '' || playerName.includes(searchTerm)) {
+            card.classList.remove('search-hidden');
+        } else {
+            card.classList.add('search-hidden');
+        }
+    });
 }
 
 // === 2. STATISTICS ===
