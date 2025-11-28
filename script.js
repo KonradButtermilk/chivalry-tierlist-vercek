@@ -318,20 +318,60 @@ document.addEventListener('DOMContentLoaded', () => {
         contextMenu.classList.remove('hidden');
     }
 
-    ctxStats.addEventListener('click', () => {
+    ctxStats.addEventListener('click', async () => {
         if (selectedPlayerId) {
             const player = findPlayerById(selectedPlayerId);
             if (player) {
-                // Copy to clipboard
-                navigator.clipboard.writeText(player.name).then(() => {
-                    alert(`Skopiowano nick: "${player.name}"\n\n1. Strona ChivalryStats otworzy się w nowej karcie.\n2. Wybierz zakładkę "Username Search".\n3. Wklej nick i kliknij Submit.`);
-                    // Open ChivalryStats player lookup
+                // Show loading state
+                const statsModal = document.getElementById('stats-modal');
+                const statsContent = document.getElementById('stats-content');
+                const statsLoading = document.getElementById('stats-loading');
+
+                if (statsModal) {
+                    statsModal.classList.remove('hidden');
+                    statsContent.classList.add('hidden');
+                    statsLoading.classList.remove('hidden');
+                    document.getElementById('stats-player-name').textContent = player.name;
+                }
+
+                try {
+                    // Call Scraper API
+                    const response = await fetch(`/api/search-player?name=${encodeURIComponent(player.name)}`);
+
+                    if (!response.ok) throw new Error('Stats not found');
+
+                    const stats = await response.json();
+
+                    // Render stats
+                    if (statsModal) {
+                        statsLoading.classList.add('hidden');
+                        statsContent.classList.remove('hidden');
+
+                        document.getElementById('stat-level').textContent = stats.level || '-';
+                        document.getElementById('stat-kd').textContent = stats.kd || '-';
+                        document.getElementById('stat-winrate').textContent = stats.winRate || '-';
+                        document.getElementById('stat-hours').textContent = stats.hours || '-';
+                    }
+                } catch (error) {
+                    console.error('Stats fetch error:', error);
+                    // Fallback to old method
+                    alert(`Nie udało się pobrać statystyk automatycznie.\n\nSkopiowano nick: "${player.name}"\nOtwieram stronę ChivalryStats...`);
+                    navigator.clipboard.writeText(player.name);
                     window.open('https://chivalry2stats.com/player', '_blank');
-                });
+                    if (statsModal) statsModal.classList.add('hidden');
+                }
             }
             contextMenu.classList.add('hidden');
         }
     });
+
+    // Stats Modal Close
+    const closeStatsBtn = document.getElementById('close-stats-btn');
+    if (closeStatsBtn) {
+        closeStatsBtn.addEventListener('click', () => {
+            document.getElementById('stats-modal').classList.add('hidden');
+        });
+    }
 
     ctxDelete.addEventListener('click', () => {
         if (selectedPlayerId) {
