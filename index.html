@@ -17,6 +17,114 @@
         <header>
             <h1>Chivalry 2 Tier List</h1>
             <div class="auth-controls">
+                <button id="history-btn" class="secondary-btn"
+                    onclick="window.location.href='history.html'">Historia</button>
+                <button id="login-btn" class="secondary-btn">Log In</button>
+                <button id="logout-btn" class="secondary-btn hidden">Log Out</button>
+            </div>
+
+            <!-- Admin Controls -->
+            <div class="controls hidden" id="admin-controls">
+                <div class="add-player-group">
+                    <input type="text" id="new-player-name" placeholder="Nazwa gracza...">
+                    <button id="add-player-btn">Dodaj Gracza</button>
+                </div>
+
+                <div class="admin-tools">
+                    <button id="toggle-selection-mode" class="secondary-btn">Tryb Wyboru (Bulk)</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Statistics Panel -->
+        <div class="utility-panel">
+            <div class="statistics-panel">
+                <div class="stat-item">
+                    <span class="stat-label">Łącznie graczy:</span>
+                    <span class="stat-value" id="total-count">0</span>
+                </div>
+                <div class="tier-stats" id="tier-stats">
+                    <!-- Tier stats will be inserted here -->
+                </div>
+            </div>
+        </div>
+
+        <main class="tier-board">
+            <div class="tier-column" data-tier="0">
+                <div class="tier-header tier-0">
+                    <button class="collapse-btn" data-tier="0">−</button>
+                    <span class="tier-title">GOAT</span>
+                    <span class="tier-count" id="count-0">(0)</span>
+                </div>
+                <div class="tier-content" id="tier-0-list">
+                    <!-- Players will go here -->
+                </div>
+            </div>
+            <div class="tier-column" data-tier="1">
+                <div class="tier-header tier-1">
+                    <button class="collapse-btn" data-tier="1">−</button>
+                    <span class="tier-title">Tier 1</span>
+                    <span class="tier-count" id="count-1">(0)</span>
+                </div>
+                <div class="tier-content" id="tier-1-list"></div>
+            </div>
+            <div class="tier-column" data-tier="2">
+                <div class="tier-header tier-2">
+                    <button class="collapse-btn" data-tier="2">−</button>
+                    <span class="tier-title">Tier 2</span>
+                    <span class="tier-count" id="count-2">(0)</span>
+                </div>
+                <div class="tier-content" id="tier-2-list"></div>
+            </div>
+            <div class="tier-column" data-tier="3">
+                <div class="tier-header tier-3">
+                    <button class="collapse-btn" data-tier="3">−</button>
+                    <span class="tier-title">Tier 3</span>
+                    <span class="tier-count" id="count-3">(0)</span>
+                </div>
+                <div class="tier-content" id="tier-3-list"></div>
+            </div>
+            <div class="tier-column" data-tier="4">
+                <div class="tier-header tier-4">
+                    <button class="collapse-btn" data-tier="4">−</button>
+                    <span class="tier-title">Tier 4</span>
+                    <span class="tier-count" id="count-4">(0)</span>
+                </div>
+                <div class="tier-content" id="tier-4-list"></div>
+            </div>
+            <div class="tier-column" data-tier="5">
+                <div class="tier-header tier-5">
+                    <button class="collapse-btn" data-tier="5">−</button>
+                    <span class="tier-title">Tier 5</span>
+                    <span class="tier-count" id="count-5">(0)</span>
+                </div>
+                <div class="tier-content" id="tier-5-list"></div>
+            </div>
+            <div class="tier-column" data-tier="6">
+                <div class="tier-header tier-6">
+                    <button class="collapse-btn" data-tier="6">−</button>
+                    <span class="tier-title">Tier 6</span>
+                    <span class="tier-count" id="count-6">(0)</span>
+                </div>
+                <div class="tier-content" id="tier-6-list"></div>
+            </div>
+        </main>
+
+        <div id="trash-zone" class="trash-zone hidden">
+            <span>🗑️ Upuść tutaj, aby usunąć</span>
+        </div>
+
+        <!-- Context Menu -->
+        <div id="context-menu" class="context-menu hidden">
+            <div class="menu-item" id="ctx-stats">📊 Zobacz statystyki</div>
+            <div class="menu-item" id="ctx-edit">✏️ Edytuj</div>
+            <div class="menu-item" id="ctx-delete">🗑️ Usuń</div>
+        </div>
+
+        <!-- Edit Player Modal -->
+        <div id="edit-modal" class="modal hidden">
+            <div class="modal-content">
+                <h2>Edytuj Gracza</h2>
                 <input type="text" id="edit-name" placeholder="Nazwa gracza">
                 <textarea id="edit-desc" placeholder="Opis (opcjonalnie)" rows="4"></textarea>
                 <div class="modal-actions">
@@ -24,19 +132,19 @@
                     <button id="cancel-edit" class="secondary-btn">Anuluj</button>
                 </div>
             </div>
-    </div>
+        </div>
 
-    <!-- Login Modal -->
-    <div id="login-modal" class="modal hidden">
-        <div class="modal-content">
-            <h2>Admin Login</h2>
-            <input type="password" id="admin-password" placeholder="Hasło administratora">
-            <div class="modal-actions">
-                <button id="submit-login">Zaloguj</button>
-                <button id="cancel-login" class="secondary-btn">Anuluj</button>
+        <!-- Login Modal -->
+        <div id="login-modal" class="modal hidden">
+            <div class="modal-content">
+                <h2>Admin Login</h2>
+                <input type="password" id="admin-password" placeholder="Hasło administratora">
+                <div class="modal-actions">
+                    <button id="submit-login">Zaloguj</button>
+                    <button id="cancel-login" class="secondary-btn">Anuluj</button>
+                </div>
             </div>
         </div>
-    </div>
     </div>
 
     <script src="script.js"></script>
