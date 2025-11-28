@@ -1,52 +1,18 @@
-// ===== MAIN PAGE ENHANCEMENTS =====
-// This file contains new features: search, stats, collapse, bulk actions, ChivalryStats integration
+// ===== MAIN PAGE ENHANCEMENTS (REFINED) =====
+// Features: Stats, Collapse, Bulk Actions (Selection Mode), ChivalryStats Integration
 
-// Initialize on DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
     initializeEnhancements();
 });
 
 function initializeEnhancements() {
-    setupSearch();
     setupStatistics();
     setupCollapse();
     setupBulkActions();
-    setupChivalryStatsLinks();
+    // ChivalryStats links are handled in script.js createPlayerCard
 }
 
-// === 1. QUICK SEARCH ===
-function setupSearch() {
-    const searchInput = document.getElementById('player-search');
-    const resetBtn = document.getElementById('search-reset');
-
-    if (!searchInput) return;
-
-    searchInput.addEventListener('input', (e) => {
-        const searchTerm = e.target.value.toLowerCase().trim();
-        filterPlayers(searchTerm);
-    });
-
-    resetBtn?.addEventListener('click', () => {
-        searchInput.value = '';
-        filterPlayers('');
-    });
-}
-
-function filterPlayers(searchTerm) {
-    const playerCards = document.querySelectorAll('.player-card');
-
-    playerCards.forEach(card => {
-        const playerName = card.querySelector('.player-name')?.textContent.toLowerCase() || '';
-
-        if (searchTerm === '' || playerName.includes(searchTerm)) {
-            card.classList.remove('search-hidden');
-        } else {
-            card.classList.add('search-hidden');
-        }
-    });
-}
-
-// === 2. STATISTICS ===
+// === 1. STATISTICS ===
 function setupStatistics() {
     updateStatistics();
 }
@@ -62,7 +28,7 @@ function updateStatistics() {
 
     for (let tier = 0; tier <= 6; tier++) {
         const tierList = document.getElementById(`tier-${tier}-list`);
-        const count = tierList?.querySelectorAll('.player-card:not(.search-hidden)').length || 0;
+        const count = tierList?.children.length || 0;
         total += count;
 
         // Update tier count badge
@@ -83,7 +49,7 @@ function updateStatistics() {
     tierStatsContainer.innerHTML = stats.join('');
 }
 
-// Call updateStatistics whenever players change
+// Hook into loadPlayers to update stats
 if (typeof window.loadPlayers === 'function') {
     const originalLoadPlayers = window.loadPlayers;
     window.loadPlayers = function (...args) {
@@ -92,18 +58,15 @@ if (typeof window.loadPlayers === 'function') {
     };
 }
 
-// === 3. COLLAPSE/EXPAND TIERS ===
+// === 2. COLLAPSE/EXPAND TIERS ===
 function setupCollapse() {
     const collapseButtons = document.querySelectorAll('.collapse-btn');
-
-    // Load saved collapse state from localStorage
     const savedState = JSON.parse(localStorage.getItem('tierCollapseState') || '{}');
 
     collapseButtons.forEach(btn => {
         const tier = btn.dataset.tier;
         const tierColumn = document.querySelector(`.tier-column[data-tier="${tier}"]`);
 
-        // Apply saved state
         if (savedState[tier]) {
             tierColumn?.classList.add('collapsed');
             btn.textContent = '+';
@@ -113,102 +76,152 @@ function setupCollapse() {
             tierColumn?.classList.toggle('collapsed');
             const isCollapsed = tierColumn?.classList.contains('collapsed');
             btn.textContent = isCollapsed ? '+' : '−';
-
-            // Save state
             savedState[tier] = isCollapsed;
             localStorage.setItem('tierCollapseState', JSON.stringify(savedState));
         });
     });
 }
 
-// === 4. BULK ACTIONS ===
+// === 3. BULK ACTIONS (SELECTION MODE) ===
+let isSelectionMode = false;
+let selectedPlayerIds = new Set();
+
 function setupBulkActions() {
-    const bulkControls = document.getElementById('bulk-controls');
-    const selectAllBtn = document.getElementById('select-all-btn');
-    const deselectAllBtn = document.getElementById('deselect-all-btn');
+    const toggleBtn = document.getElementById('toggle-selection-mode');
+    const actionsBar = document.getElementById('bulk-actions-bar');
+    const cancelBtn = document.getElementById('cancel-selection-mode');
+    const selectedCountEl = document.getElementById('selected-count');
     const bulkMoveSelect = document.getElementById('bulk-move-select');
     const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+    const tierBoard = document.querySelector('.tier-board');
 
-    if (!bulkControls) return;
+    if (!toggleBtn) return;
 
-    // Show bulk controls only when admin is logged in
-    const isAdmin = !!localStorage.getItem('admin_password');
-    if (isAdmin) {
-        bulkControls.classList.remove('hidden');
+    // Toggle Selection Mode
+    toggleBtn.addEventListener('click', () => {
+        isSelectionMode = !isSelectionMode;
+        updateSelectionModeUI();
+    });
+
+    cancelBtn?.addEventListener('click', () => {
+        isSelectionMode = false;
+        selectedPlayerIds.clear();
+        updateSelectionModeUI();
+    });
+
+    function updateSelectionModeUI() {
+        if (isSelectionMode) {
+            toggleBtn.classList.add('active');
+            toggleBtn.textContent = 'Zakończ Wybór';
+            actionsBar.classList.remove('hidden');
+            tierBoard.classList.add('selection-mode');
+        } else {
+            toggleBtn.classList.remove('active');
+            toggleBtn.textContent = 'Tryb Wyboru (Bulk)';
+            actionsBar.classList.add('hidden');
+            tierBoard.classList.remove('selection-mode');
+
+            // Clear selections visually
+            document.querySelectorAll('.player-card.selected').forEach(card => {
+                card.classList.remove('selected');
+            });
+            selectedPlayerIds.clear();
+            updateSelectedCount();
+        }
     }
 
-    selectAllBtn?.addEventListener('click', () => {
-        document.querySelectorAll('.player-checkbox').forEach(cb => cb.checked = true);
+    // Handle Card Clicks (Delegation)
+    tierBoard.addEventListener('click', (e) => {
+        if (!isSelectionMode) return;
+
+        const card = e.target.closest('.player-card');
+        if (!card) return;
+
+        // Prevent other actions
+        e.preventDefault();
+        e.stopPropagation();
+
+        const playerId = card.dataset.id;
+        if (selectedPlayerIds.has(playerId)) {
+            selectedPlayerIds.delete(playerId);
+            card.classList.remove('selected');
+        } else {
+            selectedPlayerIds.add(playerId);
+            card.classList.add('selected');
+        }
+        updateSelectedCount();
     });
 
-    deselectAllBtn?.addEventListener('click', () => {
-        document.querySelectorAll('.player-checkbox').forEach(cb => cb.checked = false);
-    });
+    function updateSelectedCount() {
+        if (selectedCountEl) {
+            selectedCountEl.textContent = selectedPlayerIds.size;
+        }
+    }
 
+    // Bulk Move
     bulkMoveSelect?.addEventListener('change', async (e) => {
         const targetTier = e.target.value;
         if (!targetTier) return;
 
-        const selectedCheckboxes = document.querySelectorAll('.player-checkbox:checked');
-        if (selectedCheckboxes.length === 0) {
-            alert('Nie wybrano żadnych graczy.');
-            return;
-        }
-
-        if (!confirm(`Przenieść ${selectedCheckboxes.length} graczy do tier ${targetTier}?`)) {
+        if (selectedPlayerIds.size === 0) {
+            alert('Wybierz najpierw graczy.');
             e.target.value = '';
             return;
         }
 
-        for (const checkbox of selectedCheckboxes) {
-            const playerId = checkbox.dataset.playerId;
-            if (playerId && typeof window.updatePlayerTier === 'function') {
-                await window.updatePlayerTier(playerId, parseInt(targetTier));
+        if (!confirm(`Przenieść ${selectedPlayerIds.size} graczy do Tier ${targetTier}?`)) {
+            e.target.value = '';
+            return;
+        }
+
+        for (const id of selectedPlayerIds) {
+            if (window.updatePlayerTier) {
+                await window.updatePlayerTier(id, parseInt(targetTier));
             }
         }
 
         e.target.value = '';
-        if (typeof window.loadPlayers === 'function') {
-            window.loadPlayers();
-        }
+        isSelectionMode = false;
+        updateSelectionModeUI();
+        if (window.loadPlayers) window.loadPlayers();
     });
 
+    // Bulk Delete
     bulkDeleteBtn?.addEventListener('click', async () => {
-        const selectedCheckboxes = document.querySelectorAll('.player-checkbox:checked');
-        if (selectedCheckboxes.length === 0) {
-            alert('Nie wybrano żadnych graczy.');
+        if (selectedPlayerIds.size === 0) {
+            alert('Wybierz najpierw graczy.');
             return;
         }
 
-        if (!confirm(`Usunąć ${selectedCheckboxes.length} graczy? Tej operacji nie można cofnąć!`)) {
+        if (!confirm(`Usunąć ${selectedPlayerIds.size} graczy? Tej operacji nie można cofnąć!`)) {
             return;
         }
 
-        for (const checkbox of selectedCheckboxes) {
-            const playerId = checkbox.dataset.playerId;
-            if (playerId && typeof window.deletePlayer === 'function') {
-                await window.deletePlayer(playerId);
+        for (const id of selectedPlayerIds) {
+            if (window.deletePlayer) {
+                await window.deletePlayer(id); // Note: deletePlayer has its own confirm, might want to bypass it for bulk
             }
         }
 
-        if (typeof window.loadPlayers === 'function') {
-            window.loadPlayers();
-        }
+        isSelectionMode = false;
+        updateSelectionModeUI();
+        if (window.loadPlayers) window.loadPlayers();
     });
 }
 
-// === 5. CHIVALRYSTATS INTEGRATION ===
-function setupChivalryStatsLinks() {
-    // This will be called when creating player cards
-    // Add to the existing createPlayerCard function
-}
-
+// === 4. CHIVALRYSTATS INTEGRATION ===
 window.openChivalryStats = function (playerName) {
+    // Open the search page with the player name pre-filled if possible, 
+    // or just the main page so user can search.
+    // Chivalry2Stats doesn't seem to have a direct "search query" URL param that works reliably for direct lookup,
+    // so we'll try to use the leaderboards search if possible, or just open the site.
+
+    // Attempt to use the leaderboards search URL pattern
     const url = `https://chivalry2stats.com/leaderboards/pc?name=${encodeURIComponent(playerName)}`;
     window.open(url, '_blank');
 };
 
-// Export for use in main script.js
+// Export
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { updateStatistics, filterPlayers };
+    module.exports = { updateStatistics };
 }

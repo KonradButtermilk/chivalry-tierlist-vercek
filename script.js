@@ -263,14 +263,6 @@ document.addEventListener('DOMContentLoaded', () => {
             div.addEventListener('dragstart', handleDragStart);
             div.addEventListener('dragend', handleDragEnd);
 
-            // Bulk Action Checkbox
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.className = 'player-checkbox';
-            checkbox.dataset.playerId = player.id;
-            checkbox.onclick = (e) => e.stopPropagation(); // Prevent drag/click interference
-            div.appendChild(checkbox);
-
             // Context Menu Trigger
             div.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
