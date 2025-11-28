@@ -12,9 +12,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const adminPasswordInput = document.getElementById('admin-password');
     const submitLoginBtn = document.getElementById('submit-login');
     const cancelLoginBtn = document.getElementById('cancel-login');
+    const toggleSelectionBtn = document.getElementById('toggle-selection-mode');
 
     // Context Menu & Edit Modal
     const contextMenu = document.getElementById('context-menu');
+    const ctxStats = document.getElementById('ctx-stats');
     const ctxEdit = document.getElementById('ctx-edit');
     const ctxDelete = document.getElementById('ctx-delete');
     const editModal = document.getElementById('edit-modal');
@@ -28,6 +30,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let isAdmin = false;
     let adminPassword = '';
     let selectedPlayerId = null; // For context menu actions
+
+    // Bulk Selection State
+    let isSelectionMode = false;
+    let selectedPlayerIds = new Set();
 
     // --- Initialization ---
     checkAuth();
@@ -47,6 +53,35 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
         }
     });
+
+    // Toggle Selection Mode
+    toggleSelectionBtn?.addEventListener('click', () => {
+        isSelectionMode = !isSelectionMode;
+        updateSelectionModeUI();
+    });
+
+    function updateSelectionModeUI() {
+        const tierBoard = document.querySelector('.tier-board');
+        if (isSelectionMode) {
+            toggleSelectionBtn.classList.add('active');
+            toggleSelectionBtn.textContent = 'Zakończ Wybór';
+            toggleSelectionBtn.style.background = 'var(--accent-color)';
+            toggleSelectionBtn.style.color = '#000';
+            tierBoard.classList.add('selection-mode');
+        } else {
+            toggleSelectionBtn.classList.remove('active');
+            toggleSelectionBtn.textContent = 'Tryb Wyboru (Bulk)';
+            toggleSelectionBtn.style.background = '';
+            toggleSelectionBtn.style.color = '';
+            tierBoard.classList.remove('selection-mode');
+
+            // Clear selections
+            selectedPlayerIds.clear();
+            document.querySelectorAll('.player-card.selected').forEach(card => {
+                card.classList.remove('selected');
+            });
+        }
+    }
 
     // --- Auth Logic ---
     function checkAuth() {
@@ -213,6 +248,8 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = 0; i <= 6; i++) {
             renderTier(i);
         }
+        // Update stats if available
+        if (window.updateStatistics) window.updateStatistics();
     }
 
     function renderTier(tierNum) {
@@ -230,6 +267,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const div = document.createElement('div');
         div.className = `player-card tier-${player.tier}`;
 
+        // Restore selection state if re-rendering
+        if (selectedPlayerIds.has(String(player.id))) {
+            div.classList.add('selected');
+        }
+
         // Player Name
         const nameSpan = document.createElement('span');
         nameSpan.className = 'player-name';
@@ -244,24 +286,27 @@ document.addEventListener('DOMContentLoaded', () => {
             div.title = player.description;
         }
 
-        // ChivalryStats Link (Always visible)
-        const statsLink = document.createElement('span');
-        statsLink.className = 'stats-link';
-        statsLink.innerHTML = '📊';
-        statsLink.title = 'Zobacz statystyki na Chivalry2Stats.com';
-        statsLink.onclick = (e) => {
-            e.stopPropagation();
-            if (window.openChivalryStats) {
-                window.openChivalryStats(player.name);
-            }
-        };
-        div.appendChild(statsLink);
-
         if (isAdmin) {
             div.draggable = true;
             div.style.cursor = 'grab';
             div.addEventListener('dragstart', handleDragStart);
             div.addEventListener('dragend', handleDragEnd);
+
+            // Click handling for Selection Mode
+            div.addEventListener('click', (e) => {
+                if (isSelectionMode) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const id = String(player.id);
+                    if (selectedPlayerIds.has(id)) {
+                        selectedPlayerIds.delete(id);
+                        div.classList.remove('selected');
+                    } else {
+                        selectedPlayerIds.add(id);
+                        div.classList.add('selected');
+                    }
+                }
+            });
 
             // Context Menu Trigger
             div.addEventListener('contextmenu', (e) => {
@@ -283,6 +328,20 @@ document.addEventListener('DOMContentLoaded', () => {
         contextMenu.style.left = `${e.clientX}px`;
         contextMenu.classList.remove('hidden');
     }
+
+    ctxStats.addEventListener('click', () => {
+        if (selectedPlayerId) {
+            const player = findPlayerById(selectedPlayerId);
+            if (player) {
+                // Copy to clipboard
+                navigator.clipboard.writeText(player.name).then(() => {
+                    // Open ChivalryStats player lookup
+                    window.open('https://chivalry2stats.com/player', '_blank');
+                });
+            }
+            contextMenu.classList.add('hidden');
+        }
+    });
 
     ctxDelete.addEventListener('click', () => {
         if (selectedPlayerId) {
@@ -351,7 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return null;
     }
 
-    // --- Drag and Drop ---
+    // --- Drag and Drop (Multi-Drag Support) ---
     let draggedItem = null;
     let sourceTier = null;
 
@@ -359,9 +418,36 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isAdmin) return;
         draggedItem = this;
         sourceTier = parseInt(this.dataset.tier);
+        const id = this.dataset.id;
+
+        // If dragging an item that is NOT selected, clear selection
+        if (!selectedPlayerIds.has(id)) {
+            if (!e.ctrlKey && !e.metaKey) { // Allow ctrl-drag to add to selection? Maybe too complex. Simpler: clear.
+                selectedPlayerIds.clear();
+                document.querySelectorAll('.player-card.selected').forEach(c => c.classList.remove('selected'));
+            }
+            // Select the dragged item
+            selectedPlayerIds.add(id);
+            this.classList.add('selected');
+        }
 
         this.classList.add('dragging');
         trashZone.classList.add('visible');
+
+        // Visual feedback for multi-drag
+        if (selectedPlayerIds.size > 1) {
+            const ghost = document.createElement('div');
+            ghost.textContent = `${selectedPlayerIds.size} graczy`;
+            ghost.style.background = '#d4af37';
+            ghost.style.padding = '5px 10px';
+            ghost.style.borderRadius = '4px';
+            ghost.style.position = 'absolute';
+            ghost.style.top = '-1000px';
+            document.body.appendChild(ghost);
+            e.dataTransfer.setDragImage(ghost, 0, 0);
+            setTimeout(() => document.body.removeChild(ghost), 0);
+        }
+
         e.dataTransfer.effectAllowed = 'move';
     }
 
@@ -381,11 +467,33 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        col.addEventListener('drop', (e) => {
+        col.addEventListener('drop', async (e) => {
             e.preventDefault();
             const targetTier = parseInt(col.dataset.tier);
-            if (draggedItem && isAdmin && targetTier !== sourceTier) {
-                movePlayer(draggedItem.dataset.id, targetTier);
+
+            if (isAdmin && selectedPlayerIds.size > 0) {
+                // Move all selected players
+                const idsToMove = Array.from(selectedPlayerIds);
+
+                // Optimistic update
+                for (const id of idsToMove) {
+                    const player = findAndRemoveLocal(id);
+                    if (player) {
+                        player.tier = targetTier;
+                        if (!tierData[targetTier]) tierData[targetTier] = [];
+                        tierData[targetTier].push(player);
+                    }
+                }
+                renderAllTiers();
+
+                // API Calls
+                for (const id of idsToMove) {
+                    await apiCall('PUT', { id, tier: targetTier });
+                }
+
+                // Clear selection after move
+                selectedPlayerIds.clear();
+                if (isSelectionMode) updateSelectionModeUI(); // Refresh UI
             }
         });
     });
@@ -399,14 +507,31 @@ document.addEventListener('DOMContentLoaded', () => {
         trashZone.classList.remove('drag-over');
     });
 
-    trashZone.addEventListener('drop', (e) => {
+    trashZone.addEventListener('drop', async (e) => {
         e.preventDefault();
-        if (draggedItem && isAdmin) {
-            deletePlayer(draggedItem.dataset.id);
+        if (isAdmin && selectedPlayerIds.size > 0) {
+            const idsToDelete = Array.from(selectedPlayerIds);
+
+            if (confirm(`Czy na pewno chcesz usunąć ${idsToDelete.length} graczy?`)) {
+                // Optimistic update
+                for (const id of idsToDelete) {
+                    findAndRemoveLocal(id);
+                }
+                renderAllTiers();
+
+                // API Calls
+                for (const id of idsToDelete) {
+                    await apiCall('DELETE', { id });
+                }
+
+                selectedPlayerIds.clear();
+                if (isSelectionMode) updateSelectionModeUI();
+            }
         }
     });
 
     async function movePlayer(id, newTier) {
+        // Legacy single move function, kept just in case
         const player = findAndRemoveLocal(id);
         if (player) {
             player.tier = newTier;
@@ -438,4 +563,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return null;
     }
+
+    // --- Expose functions for enhancements.js ---
+    window.loadPlayers = fetchData;
+    window.updatePlayerTier = movePlayer;
+    window.deletePlayer = deletePlayer;
 });
