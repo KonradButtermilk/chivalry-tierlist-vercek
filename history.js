@@ -163,6 +163,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Extra password protection
+        const deletePassword = prompt('Podaj hasło do usuwania historii:');
+        if (deletePassword !== 'Guwno123') {
+            alert('Nieprawidłowe hasło!');
+            return;
+        }
+
         const confirm1 = confirm('Czy na pewno chcesz WYCZYŚCIĆ CAŁĄ HISTORIĘ? Tej operacji nie można cofnąć!');
         if (!confirm1) return;
 
@@ -197,6 +204,13 @@ document.addEventListener('DOMContentLoaded', () => {
     window.deleteEntry = async function (id) {
         if (!isAdmin) {
             alert('Brak uprawnień.');
+            return;
+        }
+
+        // Extra password protection
+        const deletePassword = prompt('Podaj hasło do usuwania historii:');
+        if (deletePassword !== 'Guwno123') {
+            alert('Nieprawidłowe hasło!');
             return;
         }
 
