@@ -1,23 +1,12 @@
 {
-    "version": 2,
-    "builds": [
+    "rewrites": [
         {
-            "src": "netlify/functions/api.js",
-            "use": "@vercel/node"
+            "source": "/.netlify/functions/api",
+            "destination": "/api/index"
         },
         {
-            "src": "*.html",
-            "use": "@vercel/static"
-        }
-    ],
-    "routes": [
-        {
-            "src": "/.netlify/functions/api",
-            "dest": "/netlify/functions/api.js"
-        },
-        {
-            "src": "/api",
-            "dest": "/netlify/functions/api.js"
+            "source": "/api",
+            "destination": "/api/index"
         }
     ]
 }
