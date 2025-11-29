@@ -744,17 +744,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (err) {
             console.error('Profile load error:', err);
-            error.classList.remove('hidden');
-            document.getElementById('profile-error-msg').textContent = err.message || 'Nieznany błąd';
+            if (error) {
+                error.classList.remove('hidden');
+                const msgEl = document.getElementById('profile-error-msg');
+                if (msgEl) msgEl.textContent = err.message || 'Nieznany błąd';
+            }
         } finally {
-            loading.classList.add('hidden');
+            if (loading) loading.classList.add('hidden');
         }
     }
 
-    // Profile modal event listeners
-    const closeProfileBtn = document.getElementById('close-profile-btn');
-    const refreshProfileBtn = document.getElementById('refresh-profile');
-    const retryProfileBtn = document.getElementById('retry-profile');
     const profileModal = document.getElementById('player-profile-modal');
 
     if (closeProfileBtn) {
