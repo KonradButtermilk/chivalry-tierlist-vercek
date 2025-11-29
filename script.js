@@ -68,6 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateUIForAuth() {
+        window.isAdmin = isAdmin; // Keep global in sync
         if (isAdmin) {
             loginBtn.classList.add('hidden');
             logoutBtn.classList.remove('hidden');
@@ -622,6 +623,31 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(`/api/playfab-stats?` + new URLSearchParams({
                 playerName: playerName
             }));
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.error || 'Brak danych');
+            }
+
+            let stats = data.data;
+
+            // If we got a list of players (search result), pick the best match
+            if (data.data.players) {
+                if (data.data.players.length > 0) {
+                    // Fetch details for the first player
+                    const firstPlayer = data.data.players[0];
+                    const detailResponse = await fetch(`/api/playfab-stats?playfabId=${firstPlayer.playfabId}`);
+                    const detailData = await detailResponse.json();
+                    if (detailData.success && detailData.data) {
+                        stats = detailData.data;
+                        stats.playfabId = firstPlayer.playfabId; // Ensure ID is preserved
+                    } else {
+                        throw new Error('Nie udało się pobrać szczegółów gracza');
+                    }
+                } else {
+                    throw new Error('Nie znaleziono gracza');
+                }
+            }
 
             document.getElementById('profile-rank').textContent = stats.globalRank || stats.global_rank || '-';
             document.getElementById('profile-level').textContent = stats.level || '-';
@@ -635,7 +661,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('profile-wins').textContent = stats.wins || '-';
             document.getElementById('profile-losses').textContent = stats.losses || '-';
 
-            document.getElementById('profile-class').textContent = stats.favorite_class || 'Brak danych';
+            document.getElementById('profile-class').textContent = stats.favorite_class || stats.favoriteClass || 'Brak danych';
 
             // Set cache badge
             const cacheBadge = document.getElementById('profile-cache-badge');

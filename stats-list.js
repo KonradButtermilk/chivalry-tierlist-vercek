@@ -158,11 +158,11 @@ function addAssignIdButton(playerId, playfabId, displayName) {
                 assignBtn.disabled = true;
                 assignBtn.textContent = '⏳ Przypisuję...';
 
-                const response = await fetch('/netlify/functions/api', {
+                const response = await fetch('/api', {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
-                        'x-admin-password': localStorage.getItem('adminPassword')
+                        'x-admin-password': localStorage.getItem('admin_password')
                     },
                     body: JSON.stringify({
                         id: playerId,
