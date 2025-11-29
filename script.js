@@ -318,15 +318,43 @@ document.addEventListener('DOMContentLoaded', () => {
         contextMenu.classList.remove('hidden');
     }
 
-    ctxStats.addEventListener('click', async () => {
+    ctxStats.addEventListener('click', () => {
         if (selectedPlayerId) {
             const player = findPlayerById(selectedPlayerId);
             if (player) {
-                await openPlayerProfile(selectedPlayerId, player.name);
+                // Copy name to clipboard
+                navigator.clipboard.writeText(player.name).then(() => {
+                    showToast(`✅ Skopiowano nick: "${player.name}"`, 'success');
+                });
+
+                // Open ChivalryStats in new tab
+                window.open('https://chivalry2stats.com/player', '_blank');
             }
             contextMenu.classList.add('hidden');
         }
     });
+
+    // Toast notification function
+    function showToast(message, type = 'info') {
+        let toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            document.body.appendChild(toastContainer);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        toastContainer.appendChild(toast);
+        toast.offsetHeight;
+        toast.classList.add('show');
+
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
 
     // Stats Modal Close
     const closeStatsBtn = document.getElementById('close-stats-btn');
