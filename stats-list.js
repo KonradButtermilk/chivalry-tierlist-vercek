@@ -45,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (data.success && data.data && data.data.players) {
                     const players = data.data.players;
+                    console.log('[STATS-LIST] Search results:', players); // Debug log
 
                     // If only 1 result, fetch details immediately
                     if (players.length === 1) {
@@ -233,6 +234,13 @@ function showPlayerList(players, searchName, playerId) {
         item.addEventListener('click', () => {
             const playfabId = item.dataset.playfabId;
             const displayName = item.querySelector('div').textContent;
+
+            if (!playfabId || playfabId === 'undefined') {
+                console.error('[STATS-LIST] Missing PlayFab ID for:', displayName);
+                showToast('❌ Błąd: Brak ID gracza', 'error');
+                return;
+            }
+
             showPlayerDetails(playfabId, displayName, playerId);
         });
 

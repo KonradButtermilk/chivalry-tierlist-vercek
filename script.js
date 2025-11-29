@@ -593,7 +593,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 300);
         }, 3000);
     }
-
     // ===== ENHANCED PLAYER PROFILE =====
 
     async function openPlayerProfile(playerId, playerName, isSearch = false) {
@@ -619,36 +618,60 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            // Fetch stats from correct endpoint
-            const response = await fetch(`/api/playfab-stats?` + new URLSearchParams({
-                playerName: playerName
-            }));
-            const data = await response.json();
+            let stats;
 
-            if (!data.success) {
-                throw new Error(data.error || 'Brak danych');
-            }
+            // 1. Try to use stored PlayFab ID first (if not searching manually)
+            if (!isSearch && player && player.playfab_id) {
+                console.log('Using stored PlayFab ID:', player.playfab_id);
+                const response = await fetch(`/api/playfab-stats?playfabId=${player.playfab_id}`);
+                const data = await response.json();
 
-            let stats = data.data;
-
-            // If we got a list of players (search result), pick the best match
-            if (data.data.players) {
-                if (data.data.players.length > 0) {
-                    // Fetch details for the first player
-                    const firstPlayer = data.data.players[0];
-                    const detailResponse = await fetch(`/api/playfab-stats?playfabId=${firstPlayer.playfabId}`);
-                    const detailData = await detailResponse.json();
-                    if (detailData.success && detailData.data) {
-                        stats = detailData.data;
-                        stats.playfabId = firstPlayer.playfabId; // Ensure ID is preserved
-                    } else {
-                        throw new Error('Nie udało się pobrać szczegółów gracza');
-                    }
+                if (data.success && data.data) {
+                    stats = data.data;
+                    stats.playfabId = player.playfab_id;
                 } else {
-                    throw new Error('Nie znaleziono gracza');
+                    throw new Error('Nie udało się pobrać danych dla zapisanego ID');
+                }
+            }
+            // 2. Otherwise search by name
+            else {
+                console.log('Searching by name:', playerName);
+                const response = await fetch(`/api/playfab-stats?` + new URLSearchParams({
+                    playerName: playerName
+                }));
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error || 'Brak danych');
+                }
+
+                stats = data.data;
+
+                // If we got a list of players (search result), pick the best match
+                if (data.data.players) {
+                    if (data.data.players.length > 0) {
+                        // Fetch details for the first player
+                        const firstPlayer = data.data.players[0];
+                        // Check for ID field (could be playfabId or id)
+                        const firstId = firstPlayer.playfabId || firstPlayer.id;
+
+                        if (!firstId) throw new Error('Błąd danych API (brak ID)');
+
+                        const detailResponse = await fetch(`/api/playfab-stats?playfabId=${firstId}`);
+                        const detailData = await detailResponse.json();
+                        if (detailData.success && detailData.data) {
+                            stats = detailData.data;
+                            stats.playfabId = firstId;
+                        } else {
+                            throw new Error('Nie udało się pobrać szczegółów gracza');
+                        }
+                    } else {
+                        throw new Error('Nie znaleziono gracza');
+                    }
                 }
             }
 
+            // Render Stats
             document.getElementById('profile-rank').textContent = stats.globalRank || stats.global_rank || '-';
             document.getElementById('profile-level').textContent = stats.level || '-';
             document.getElementById('profile-kd').textContent = stats.kdRatio ? parseFloat(stats.kdRatio).toFixed(2) : (stats.kd_ratio?.toFixed(2) || '-');
@@ -689,7 +712,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const aliasesContainer = document.getElementById('profile-aliases-container');
             if (aliasesList && aliasesContainer) {
                 aliasesList.innerHTML = '';
-                // Check for aliases in various possible fields
                 const aliases = stats.aliases || stats.otherNames || (stats.history ? stats.history.map(h => h.name) : []);
 
                 if (aliases && aliases.length > 0) {
@@ -715,11 +737,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            // Show content
+            content.classList.remove('hidden');
+
         } catch (err) {
             console.error('Profile load error:', err);
-            loading.classList.add('hidden');
             error.classList.remove('hidden');
             document.getElementById('profile-error-msg').textContent = err.message || 'Nieznany błąd';
+        } finally {
+            loading.classList.add('hidden');
         }
     }
 
