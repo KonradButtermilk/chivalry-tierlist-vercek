@@ -602,19 +602,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const error = document.getElementById('profile-error');
 
         // Show modal and loading state
-        modal.classList.remove('hidden');
-        loading.classList.remove('hidden');
-        content.classList.add('hidden');
-        error.classList.add('hidden');
+        if (modal) modal.classList.remove('hidden');
+        if (loading) loading.classList.remove('hidden');
+        if (content) content.classList.add('hidden');
+        if (error) error.classList.add('hidden');
 
         // Set player name
-        document.getElementById('profile-player-name').textContent = playerName;
+        const nameEl = document.getElementById('profile-player-name');
+        if (nameEl) nameEl.textContent = playerName;
 
         // Find player tier
         const player = findPlayerById(playerId);
         if (player) {
             const tierNames = ['GOAT', 'Tier 1', 'Tier 2', 'Tier 3', 'Tier 4', 'Tier 5', 'Tier 6'];
-            document.getElementById('profile-tier-badge').textContent = tierNames[player.tier] || `Tier ${player.tier}`;
+            const tierBadge = document.getElementById('profile-tier-badge');
+            if (tierBadge) tierBadge.textContent = tierNames[player.tier] || `Tier ${player.tier}`;
         }
 
         try {
@@ -630,7 +632,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     stats = data.data;
                     stats.playfabId = player.playfab_id;
                 } else {
-                    throw new Error('Nie udało się pobrać danych dla zapisanego ID');
+                    throw new Error(data.error || data.details || 'Nie udało się pobrać danych dla zapisanego ID');
                 }
             }
             // 2. Otherwise search by name
@@ -663,7 +665,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             stats = detailData.data;
                             stats.playfabId = firstId;
                         } else {
-                            throw new Error('Nie udało się pobrać szczegółów gracza');
+                            throw new Error(detailData.error || detailData.details || 'Nie udało się pobrać szczegółów gracza');
                         }
                     } else {
                         throw new Error('Nie znaleziono gracza');
