@@ -318,17 +318,39 @@ document.addEventListener('DOMContentLoaded', () => {
         contextMenu.classList.remove('hidden');
     }
 
-    ctxStats.addEventListener('click', () => {
+    ctxStats.addEventListener('click', async () => {
         if (selectedPlayerId) {
             const player = findPlayerById(selectedPlayerId);
             if (player) {
-                // Copy name to clipboard
-                navigator.clipboard.writeText(player.name).then(() => {
-                    showToast(`✅ Skopiowano nick: "${player.name}"`, 'success');
-                });
+                // Try API first
+                showToast('🤖 Próbuję pobrać statystyki automatycznie...', 'info');
 
-                // Open ChivalryStats in new tab
-                window.open('https://chivalry2stats.com/player', '_blank');
+                try {
+                    const response = await fetch(`/api/playfab-stats?playerName=${encodeURIComponent(player.name)}`);
+                    const data = await response.json();
+
+                    if (data.success) {
+                        // Success! Show the data
+                        showToast('✅ Pobrano statystyki!', 'success');
+                        console.log('Stats data:', data);
+                        // TODO: Display in modal
+                        alert(JSON.stringify(data.data, null, 2));
+                    } else {
+                        throw new Error('API failed');
+                    }
+                } catch (err) {
+                    // Fallback to old method
+                    console.log('API failed, using fallback:', err);
+                    showToast('ℹ️ API niepubliczne - używam metody ręcznej', 'info');
+
+                    // Copy name to clipboard
+                    navigator.clipboard.writeText(player.name).then(() => {
+                        showToast(`✅ Skopiowano nick: "${player.name}"`, 'success');
+                    });
+
+                    // Open ChivalryStats in new tab
+                    window.open('https://chivalry2stats.com/player', '_blank');
+                }
             }
             contextMenu.classList.add('hidden');
         }
