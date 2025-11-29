@@ -9,6 +9,8 @@
   "dependencies": {
     "pg": "^8.11.3",
     "puppeteer-core": "^19.11.1",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "@sparticuz/chromium": "^112.0.0"
   }
 }
