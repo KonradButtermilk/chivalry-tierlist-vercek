@@ -12,6 +12,7 @@ module.exports = async (req, res) => {
     const { playerName, playfabId } = req.query;
 
     // If playfabId provided, get player details
+    // If playfabId provided, get player details
     if (playfabId) {
         try {
             const endpoint = `${DETAILS_API}/${encodeURIComponent(playfabId)}`;
@@ -24,7 +25,8 @@ module.exports = async (req, res) => {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({})
+                // Try sending pagination params even for ID search, as the API might expect a body
+                body: JSON.stringify({ page: 0, pageSize: 10 })
             });
 
             if (response.ok) {
@@ -34,9 +36,17 @@ module.exports = async (req, res) => {
                     source: 'ChivalryStats Details API',
                     data: data
                 });
+            } else {
+                const errorText = await response.text();
+                console.error(`PlayFab ID lookup failed: ${response.status} ${errorText}`);
+                return res.status(response.status).json({
+                    error: 'ChivalryStats ID Lookup Failed',
+                    details: errorText
+                });
             }
         } catch (error) {
             console.error('PlayFab ID lookup error:', error);
+            return res.status(500).json({ error: 'Internal Server Error', details: error.message });
         }
     }
 
