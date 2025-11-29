@@ -2,8 +2,8 @@ const chromium = require('@sparticuz/chromium');
 const puppeteer = require('puppeteer-core');
 
 // Retry configuration
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000; // 1 second
+const MAX_RETRIES = 2;
+const RETRY_DELAY = 500;
 
 // Helper function to delay
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -17,22 +17,19 @@ async function scrapePlayerStats(name, retryCount = 0) {
 
         // Configure browser for Vercel environment
         browser = await puppeteer.launch({
-            args: chromium.args,
+            args: [...chromium.args, '--hide-scrollbars', '--disable-web-security'],
             defaultViewport: chromium.defaultViewport,
             executablePath: await chromium.executablePath(),
-            headless: chromium.headless,
+            headless: true,
             ignoreHTTPSErrors: true,
         });
 
         const page = await browser.newPage();
 
-        // Set user agent to be polite
-        await page.setUserAgent('ChivalryTierlist/1.0 (Player Stats Integration)');
-
         // Block resources to speed up loading
         await page.setRequestInterception(true);
         page.on('request', (req) => {
-            if (['image', 'stylesheet', 'font', 'media'].includes(req.resourceType())) {
+            if (['image', 'stylesheet', 'font', 'media', 'other'].includes(req.resourceType())) {
                 req.abort();
             } else {
                 req.continue();
@@ -43,49 +40,60 @@ async function scrapePlayerStats(name, retryCount = 0) {
         console.log('Navigating to ChivalryStats...');
         await page.goto('https://chivalry2stats.com/player', {
             waitUntil: 'domcontentloaded',
-            timeout: 30000
+            timeout: 15000
         });
 
-        // Click "Username Search" tab
-        console.log('Looking for Username Search tab...');
-        const tabClicked = await page.evaluate(() => {
-            const elements = Array.from(document.querySelectorAll('button, div[role="button"], span, a'));
-            const tab = elements.find(el =>
-                el.textContent && el.textContent.trim().toLowerCase().includes('username search')
-            );
-            if (tab) {
-                tab.click();
-                return true;
+        // Check if input is already available (skip tab click if so)
+        const inputSelector = 'input[placeholder*="Username"], input[type="text"]';
+        let input = await page.$(inputSelector);
+
+        if (!input) {
+            console.log('Input not found, looking for tab...');
+            const tabClicked = await page.evaluate(() => {
+                const elements = Array.from(document.querySelectorAll('button, div[role="button"], span, a'));
+                const tab = elements.find(el =>
+                    el.textContent && el.textContent.trim().toLowerCase().includes('username search')
+                );
+                if (tab) {
+                    tab.click();
+                    return true;
+                }
+                return false;
+            });
+
+            if (tabClicked) {
+                await delay(200);
+                input = await page.$(inputSelector);
             }
-            return false;
-        });
-
-        if (!tabClicked) {
-            throw new Error('Username Search tab not found');
         }
 
-        // Wait a bit for tab content to load
-        await delay(500);
+        if (!input) {
+            throw new Error('Search input not found');
+        }
 
         // Type username
         console.log('Typing username...');
-        await page.waitForSelector('input[placeholder*="Username"], input[type="text"]', { timeout: 5000 });
-
-        const input = await page.$('input[placeholder*="Username"], input[type="text"]');
-        await input.click({ clickCount: 3 }); // Select all existing text
+        await input.click({ clickCount: 3 });
         await input.type(name);
         await page.keyboard.press('Enter');
 
         // Wait for results
         console.log('Waiting for results...');
-        await page.waitForFunction(
-            () => {
-                return document.querySelector('.player-card, .stats-card, .profile-card') ||
-                    document.body.textContent.includes('No players found') ||
-                    document.body.textContent.includes('Player not found');
-            },
-            { timeout: 10000 }
-        );
+        try {
+            await page.waitForFunction(
+                () => {
+                    const text = document.body.textContent;
+                    return document.querySelector('.player-card') ||
+                        document.querySelector('.stats-card') ||
+                        document.querySelector('.profile-card') ||
+                        text.includes('No players found') ||
+                        text.includes('Player not found');
+                },
+                { timeout: 8000 }
+            );
+        } catch (e) {
+            console.log('Wait for results timed out, checking content anyway...');
+        }
 
         // Check for "No players found"
         const noResults = await page.evaluate(() => {
@@ -101,7 +109,6 @@ async function scrapePlayerStats(name, retryCount = 0) {
         // Extract comprehensive data
         console.log('Extracting comprehensive player data...');
         const stats = await page.evaluate(() => {
-            // Helper to find element by label text
             const findByLabel = (labelText) => {
                 const labels = Array.from(document.querySelectorAll('div, span, p, h3, h4, td, th, label'));
                 const label = labels.find(el => {
@@ -110,15 +117,12 @@ async function scrapePlayerStats(name, retryCount = 0) {
                 });
 
                 if (label) {
-                    // Try next sibling
                     if (label.nextElementSibling) {
                         return label.nextElementSibling.textContent.trim();
                     }
-                    // Try parent's next sibling
                     if (label.parentElement && label.parentElement.nextElementSibling) {
                         return label.parentElement.nextElementSibling.textContent.trim();
                     }
-                    // Try looking for value in same parent
                     const parent = label.parentElement;
                     if (parent && parent.children.length > 1) {
                         for (let child of parent.children) {
@@ -131,7 +135,6 @@ async function scrapePlayerStats(name, retryCount = 0) {
                 return null;
             };
 
-            // Extract stats with multiple strategies
             const extractStat = (...possibleLabels) => {
                 for (const label of possibleLabels) {
                     const value = findByLabel(label);
@@ -140,49 +143,24 @@ async function scrapePlayerStats(name, retryCount = 0) {
                 return null;
             };
 
-            // Core stats
-            const globalRank = extractStat('Global Rank', 'Rank', 'global rank');
-            const level = extractStat('Level', 'Player Level', 'LVL');
-            const kdRatio = extractStat('K/D Ratio', 'K/D', 'KD Ratio', 'Kill/Death');
-            const winRate = extractStat('Win %', 'Win Rate', 'Win Percentage', 'Wins %');
-            const timePlayed = extractStat('Time Played', 'Playtime', 'Hours Played', 'Total Time');
-
-            // Additional stats
-            const kills = extractStat('Kills', 'Total Kills');
-            const deaths = extractStat('Deaths', 'Total Deaths');
-            const wins = extractStat('Wins', 'Total Wins');
-            const losses = extractStat('Losses', 'Total Losses');
-            const matches = extractStat('Matches Played', 'Total Matches', 'Games Played');
-            const favoriteClass = extractStat('Favorite Class', 'Main Class', 'Most Played Class');
-
-            // Get raw page text for debugging (first 500 chars)
-            const rawPageText = document.body.textContent.substring(0, 500);
-
             return {
-                // Core stats
-                globalRank,
-                level,
-                kdRatio,
-                winRate,
-                timePlayed,
-
-                // Additional stats
-                kills,
-                deaths,
-                wins,
-                losses,
-                matches,
-                favoriteClass,
-
-                // Metadata
-                scrapedAt: new Date().toISOString(),
-                rawPageText // For debugging
+                globalRank: extractStat('Global Rank', 'Rank', 'global rank'),
+                level: extractStat('Level', 'Player Level', 'LVL'),
+                kdRatio: extractStat('K/D Ratio', 'K/D', 'KD Ratio', 'Kill/Death'),
+                winRate: extractStat('Win %', 'Win Rate', 'Win Percentage', 'Wins %'),
+                timePlayed: extractStat('Time Played', 'Playtime', 'Hours Played', 'Total Time'),
+                kills: extractStat('Kills', 'Total Kills'),
+                deaths: extractStat('Deaths', 'Total Deaths'),
+                wins: extractStat('Wins', 'Total Wins'),
+                losses: extractStat('Losses', 'Total Losses'),
+                matches: extractStat('Matches Played', 'Total Matches', 'Games Played'),
+                favoriteClass: extractStat('Favorite Class', 'Main Class', 'Most Played Class'),
+                scrapedAt: new Date().toISOString()
             };
         });
 
         console.log('Stats extracted:', stats);
 
-        // Validate that we got at least some data
         const hasData = Object.values(stats).some(val =>
             val !== null && val !== undefined && val !== ''
         );
@@ -196,7 +174,6 @@ async function scrapePlayerStats(name, retryCount = 0) {
     } catch (error) {
         console.error(`[Attempt ${retryCount + 1}] Scraping error:`, error.message);
 
-        // Retry logic
         if (retryCount < MAX_RETRIES - 1) {
             console.log(`Retrying in ${RETRY_DELAY}ms...`);
             await delay(RETRY_DELAY);
@@ -211,43 +188,29 @@ async function scrapePlayerStats(name, retryCount = 0) {
     }
 }
 
-// Vercel serverless function handler
 module.exports = async (req, res) => {
-    // Set CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
-
-    if (req.method !== 'GET') {
-        return res.status(405).json({ error: 'Method not allowed' });
-    }
+    if (req.method === 'OPTIONS') return res.status(200).end();
+    if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
     const { name } = req.query;
-    if (!name || name.trim() === '') {
-        return res.status(400).json({ error: 'Missing or empty name parameter' });
-    }
+    if (!name || name.trim() === '') return res.status(400).json({ error: 'Missing name' });
 
     try {
         const result = await scrapePlayerStats(name.trim());
 
-        if (result.notFound) {
-            return res.status(404).json({ error: 'Player not found' });
-        }
-
-        if (result.success) {
-            return res.status(200).json(result.stats);
-        }
+        if (result.notFound) return res.status(404).json({ error: 'Player not found' });
+        if (result.success) return res.status(200).json(result.stats);
 
         return res.status(500).json({ error: 'Unexpected scraper response' });
 
     } catch (error) {
-        console.error('Final error after all retries:', error);
+        console.error('Final error:', error);
         return res.status(500).json({
-            error: 'Failed to fetch stats after multiple attempts',
+            error: 'Failed to fetch stats',
             details: error.message
         });
     }
