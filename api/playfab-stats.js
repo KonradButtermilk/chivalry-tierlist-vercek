@@ -1,6 +1,5 @@
 // ChivalryStats backend API (discovered endpoint)
 const SEARCH_API = 'https://chivalry2stats.com:8443/api/player/usernameSearch';
-const DETAILS_API = 'https://chivalry2stats.com:8443/api/player/playfabIdSearch';
 
 module.exports = async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -11,47 +10,21 @@ module.exports = async (req, res) => {
 
     const { playerName, playfabId } = req.query;
 
-    // If playfabId provided, get player details
-    // If playfabId provided, get player details
+    // Note: PlayFab ID direct lookup endpoint is deprecated/broken (returns 404)
+    // We now rely on the username search API which returns all necessary data
+
     if (playfabId) {
-        try {
-            const endpoint = `${DETAILS_API}/${encodeURIComponent(playfabId)}`;
-            console.log(`Getting player details: ${endpoint}`);
-
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                },
-                // Try sending pagination params even for ID search, as the API might expect a body
-                body: JSON.stringify({ page: 0, pageSize: 10 })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                return res.status(200).json({
-                    success: true,
-                    source: 'ChivalryStats Details API',
-                    data: data
-                });
-            } else {
-                const errorText = await response.text();
-                console.error(`PlayFab ID lookup failed: ${response.status} ${errorText}`);
-                return res.status(response.status).json({
-                    error: 'ChivalryStats ID Lookup Failed',
-                    details: errorText
-                });
-            }
-        } catch (error) {
-            console.error('PlayFab ID lookup error:', error);
-            return res.status(500).json({ error: 'Internal Server Error', details: error.message });
-        }
+        // If we have a PlayFab ID, we can't fetch details directly anymore
+        // Return an error suggesting to search by name instead
+        return res.status(404).json({
+            success: false,
+            error: 'PlayFab ID lookup is no longer supported by ChivalryStats API',
+            suggestion: 'Please search by username instead'
+        });
     }
 
-    // Otherwise search by name  
-    if (!playerName) return res.status(400).json({ error: 'Missing playerName or playfabId' });
+    // Search by name  
+    if (!playerName) return res.status(400).json({ error: 'Missing playerName' });
 
     try {
         const endpoint = `${SEARCH_API}/${encodeURIComponent(playerName)}`;
@@ -69,7 +42,26 @@ module.exports = async (req, res) => {
 
         if (response.ok) {
             const data = await response.json();
-            console.log(`Success! Got ${data.totalRecords || 0} results`);
+            console.log(`Success! Got ${data.players?.length || 0} results`);
+
+            // Enrich each player with parsed aliases
+            if (data.players && Array.isArray(data.players)) {
+                data.players = data.players.map(player => {
+                    const aliases = player.aliasHistory
+                        ? player.aliasHistory.split(',').map(a => a.trim()).filter(Boolean)
+                        : [];
+
+                    return {
+                        ...player,
+                        aliases,
+                        // Add compatibility fields for frontend
+                        id: player.playfabId,
+                        level: player.lookupCount || 0, // Use lookup count as a proxy for activity
+                        lastSeen: player.lastLookup
+                    };
+                });
+            }
+
             return res.status(200).json({
                 success: true,
                 source: 'ChivalryStats Search API',
@@ -79,6 +71,7 @@ module.exports = async (req, res) => {
             const errorText = await response.text();
             console.log(`Failed with status ${response.status}: ${errorText}`);
             return res.status(response.status).json({
+                success: false,
                 error: 'ChivalryStats API failed',
                 message: `Status: ${response.status}`,
                 details: errorText
@@ -88,6 +81,7 @@ module.exports = async (req, res) => {
     } catch (error) {
         console.error('ChivalryStats API error:', error);
         return res.status(500).json({
+            success: false,
             error: 'Failed to fetch stats',
             details: error.message
         });

@@ -621,72 +621,91 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             let stats;
+            let playfabId;
 
-            // 1. Try to use stored PlayFab ID first (if not searching manually)
+            // 1. Try to fetch via stored PlayFab ID (but this will now return an error)
             if (!isSearch && player && player.playfab_id) {
-                console.log('Using stored PlayFab ID:', player.playfab_id);
-                const response = await fetch(`/api/playfab-stats?playfabId=${player.playfab_id}`);
-                const data = await response.json();
-
-                if (data.success && data.data) {
-                    stats = data.data;
-                    stats.playfabId = player.playfab_id;
-                } else {
-                    throw new Error(data.error || data.details || 'Nie udało się pobrać danych dla zapisanego ID');
-                }
-            }
-            // 2. Otherwise search by name
-            else {
-                console.log('Searching by name:', playerName);
-                const response = await fetch(`/api/playfab-stats?` + new URLSearchParams({
-                    playerName: playerName
-                }));
-                const data = await response.json();
-
-                if (!data.success) {
-                    throw new Error(data.error || 'Brak danych');
-                }
-
-                stats = data.data;
-
-                // If we got a list of players (search result), pick the best match
-                if (data.data.players) {
-                    if (data.data.players.length > 0) {
-                        // Fetch details for the first player
-                        const firstPlayer = data.data.players[0];
-                        // Check for ID field (could be playfabId or id)
-                        const firstId = firstPlayer.playfabId || firstPlayer.id;
-
-                        if (!firstId) throw new Error('Błąd danych API (brak ID)');
-
-                        const detailResponse = await fetch(`/api/playfab-stats?playfabId=${firstId}`);
-                        const detailData = await detailResponse.json();
-                        if (detailData.success && detailData.data) {
-                            stats = detailData.data;
-                            stats.playfabId = firstId;
-                        } else {
-                            throw new Error(detailData.error || detailData.details || 'Nie udało się pobrać szczegółów gracza');
-                        }
-                    } else {
-                        throw new Error('Nie znaleziono gracza');
-                    }
-                }
+                console.log('[Profile] Has stored PlayFab ID:', player.playfab_id);
+                playfabId = player.playfab_id;
+                // We'll search by name anyway since the ID endpoint is broken
             }
 
-            // Render Stats
-            document.getElementById('profile-rank').textContent = stats.globalRank || stats.global_rank || '-';
-            document.getElementById('profile-level').textContent = stats.level || '-';
-            document.getElementById('profile-kd').textContent = stats.kdRatio ? parseFloat(stats.kdRatio).toFixed(2) : (stats.kd_ratio?.toFixed(2) || '-');
-            document.getElementById('profile-winrate').textContent = stats.winRate ? `${parseFloat(stats.winRate).toFixed(1)}%` : (stats.win_rate ? `${stats.win_rate.toFixed(1)}%` : '-');
+            // 2. Always search by name (since PlayFab ID endpoint is deprecated)
+            console.log('[Profile] Searching by name:', playerName);
+            const response = await fetch(`/api/playfab-stats?` + new URLSearchParams({
+                playerName: playerName
+            }));
+            const data = await response.json();
 
-            document.getElementById('profile-hours').textContent = stats.timePlayed || stats.hours_played || '-';
-            document.getElementById('profile-matches').textContent = stats.matchesPlayed || stats.matches_played || '-';
-            document.getElementById('profile-kills').textContent = stats.kills || '-';
-            document.getElementById('profile-deaths').textContent = stats.deaths || '-';
-            document.getElementById('profile-wins').textContent = stats.wins || '-';
-            document.getElementById('profile-losses').textContent = stats.losses || '-';
+            if (!data.success) {
+                throw new Error(data.error || data.details || 'Brak danych');
+            }
 
-            document.getElementById('profile-class').textContent = stats.favorite_class || stats.favoriteClass || 'Brak danych';
+            // The API returns { players: [...] } with search results
+            if (data.data && data.data.players && data.data.players.length > 0) {
+                // Find the best match (prefer exact match or first result)
+                let bestMatch = data.data.players[0];
+
+                // If we have a stored PlayFab ID, try to find exact match
+                if (playfabId) {
+                    const exactMatch = data.data.players.find(p => p.playfabId === playfabId);
+                    if (exactMatch) bestMatch = exactMatch;
+                }
+
+                // Map search result to stats format
+                stats = {
+                    playfabId: bestMatch.playfabId || bestMatch.id,
+                    // Search results don't have detailed stats, only metadata
+                    lookupCount: bestMatch.lookupCount || 0,
+                    lastLookup: bestMatch.lastLookup || bestMatch.lastSeen,
+                    previousLookup: bestMatch.previousLookup,
+                    supporter: bestMatch.supporter || false,
+                    aliases: bestMatch.aliases || [],
+                    aliasHistory: bestMatch.aliasHistory || '',
+
+                    // Display-friendly values (we don't have full stats from search)
+                    globalRank: '-',
+                    level: bestMatch.lookupCount || '-', // Use lookup count as proxy
+                    kdRatio: '-',
+                    winRate: '-',
+                    timePlayed: '-',
+                    matchesPlayed: '-',
+                    kills: '-',
+                    deaths: '-',
+                    wins: '-',
+                    losses: '-',
+                    favoriteClass: 'Brak danych'
+                };
+
+                console.log('[Profile] Using search result:', stats);
+            } else {
+                throw new Error('Nie znaleziono gracza');
+            }
+
+            // Render Stats (with fallbacks for missing data)
+            const rankEl = document.getElementById('profile-rank');
+            const levelEl = document.getElementById('profile-level');
+            const kdEl = document.getElementById('profile-kd');
+            const winrateEl = document.getElementById('profile-winrate');
+            const hoursEl = document.getElementById('profile-hours');
+            const matchesEl = document.getElementById('profile-matches');
+            const killsEl = document.getElementById('profile-kills');
+            const deathsEl = document.getElementById('profile-deaths');
+            const winsEl = document.getElementById('profile-wins');
+            const lossesEl = document.getElementById('profile-losses');
+            const classEl = document.getElementById('profile-class');
+
+            if (rankEl) rankEl.textContent = stats.globalRank || stats.global_rank || '-';
+            if (levelEl) levelEl.textContent = stats.level || '-';
+            if (kdEl) kdEl.textContent = stats.kdRatio ? parseFloat(stats.kdRatio).toFixed(2) : (stats.kd_ratio?.toFixed(2) || '-');
+            if (winrateEl) winrateEl.textContent = stats.winRate ? `${parseFloat(stats.winRate).toFixed(1)}%` : (stats.win_rate ? `${stats.win_rate.toFixed(1)}%` : '-');
+            if (hoursEl) hoursEl.textContent = stats.timePlayed || stats.hours_played || '-';
+            if (matchesEl) matchesEl.textContent = stats.matchesPlayed || stats.matches_played || stats.lookupCount || '-';
+            if (killsEl) killsEl.textContent = stats.kills || '-';
+            if (deathsEl) deathsEl.textContent = stats.deaths || '-';
+            if (winsEl) winsEl.textContent = stats.wins || '-';
+            if (lossesEl) lossesEl.textContent = stats.losses || '-';
+            if (classEl) classEl.textContent = stats.favorite_class || stats.favoriteClass || 'Brak danych';
 
             // Set cache badge
             const cacheBadge = document.getElementById('profile-cache-badge');
@@ -744,16 +763,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (err) {
             console.error('Profile load error:', err);
-            if (error) {
-                error.classList.remove('hidden');
-                const msgEl = document.getElementById('profile-error-msg');
-                if (msgEl) msgEl.textContent = err.message || 'Nieznany błąd';
-            }
+            error.classList.remove('hidden');
+            document.getElementById('profile-error-msg').textContent = err.message || 'Nieznany błąd';
         } finally {
-            if (loading) loading.classList.add('hidden');
+            loading.classList.add('hidden');
         }
     }
 
+    // Profile modal event listeners
+    const closeProfileBtn = document.getElementById('close-profile-btn');
+    const refreshProfileBtn = document.getElementById('refresh-profile');
+    const retryProfileBtn = document.getElementById('retry-profile');
     const profileModal = document.getElementById('player-profile-modal');
 
     if (closeProfileBtn) {

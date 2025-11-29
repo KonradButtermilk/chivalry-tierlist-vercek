@@ -71,58 +71,100 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// Show detailed view for a specific player
 async function showPlayerDetails(playfabId, playerName, playerId) {
+    console.log(`[STATS-LIST] showPlayerDetails(${playfabId}, ${playerName}, ${playerId})`);
+
     const modal = document.getElementById('player-profile-modal');
     const loading = document.getElementById('profile-loading');
     const content = document.getElementById('profile-content');
+    const error = document.getElementById('profile-error');
 
-    currentPlayfabId = playfabId; // Store for "Assign ID" button
+    if (modal) modal.classList.remove('hidden');
+    if (loading) loading.classList.remove('hidden');
+    if (content) content.classList.add('hidden');
+    if (error) error.classList.add('hidden');
 
-    // Show loading
-    modal.classList.remove('hidden');
-    loading.classList.remove('hidden');
-    content.classList.add('hidden');
-    document.getElementById('profile-player-name').textContent = playerName;
+    showToast('📥 Pobieranie szczegółów...', 'info');
 
     try {
-        showToast('📥 Pobieranie szczegółów...', 'info');
-
-        const response = await fetch(`/api/playfab-stats?playfabId=${encodeURIComponent(playfabId)}`);
+        // Search again by name to get fresh data (PlayFab ID endpoint is broken)
+        const response = await fetch(`/api/playfab-stats?playerName=${encodeURIComponent(playerName)}`);
         const data = await response.json();
 
-        if (data.success && data.data) {
-            const playerData = data.data;
+        if (!data.success || !data.data || !data.data.players || data.data.players.length === 0) {
+            throw new Error(data.error || 'No player data');
+        }
 
+        // Find the matching player by PlayFab ID
+        let playerData = data.data.players.find(p => p.playfabId === playfabId);
+        if (!playerData) {
+            // Fallback to first result if exact match not found
+            playerData = data.data.players[0];
+        }
+
+        if (playerData) {
             loading.classList.add('hidden');
             content.classList.remove('hidden');
 
             showToast('✅ Załadowano profil!', 'success');
 
-            // Populate modal with real data
-            document.getElementById('profile-player-name').textContent = playerData.displayName || playerName;
-            document.getElementById('profile-tier-badge').textContent = '🤖 Auto';
-            document.getElementById('profile-cache-badge').textContent = 'Live Data';
+            // Populate modal with data from search results
+            const nameEl = document.getElementById('profile-player-name');
+            const tierBadgeEl = document.getElementById('profile-tier-badge');
+            const cacheBadgeEl = document.getElementById('profile-cache-badge');
 
-            // Fill stats
-            const st = playerData.stats || {};
-            document.getElementById('profile-rank').textContent = st.globalRank || '-';
-            document.getElementById('profile-level').textContent = st.level || '-';
-            document.getElementById('profile-kd').textContent = st.kdRatio ? parseFloat(st.kdRatio).toFixed(2) : '-';
-            document.getElementById('profile-winrate').textContent = st.winRate ? `${parseFloat(st.winRate).toFixed(1)}%` : '-';
-            document.getElementById('profile-hours').textContent = st.timePlayed || '-';
-            document.getElementById('profile-matches').textContent = st.matchesPlayed || '-';
-            document.getElementById('profile-kills').textContent = st.kills || '-';
-            document.getElementById('profile-deaths').textContent = st.deaths || '-';
-            document.getElementById('profile-wins').textContent = st.wins || '-';
-            document.getElementById('profile-losses').textContent = st.losses || '-';
-            document.getElementById('profile-class').textContent = st.favoriteClass || 'Brak';
-            document.getElementById('view-chivstats').href = `https://chivalry2stats.com/player?id=${playfabId}`;
+            if (nameEl) nameEl.textContent = playerName;
+            if (tierBadgeEl) tierBadgeEl.textContent = '🤖 Auto';
+            if (cacheBadgeEl) cacheBadgeEl.textContent = `🔎 ${playerData.lookupCount || 0} wyszukań`;
+
+            // Fill stats (search results have limited data)
+            const rankEl = document.getElementById('profile-rank');
+            const levelEl = document.getElementById('profile-level');
+            const kdEl = document.getElementById('profile-kd');
+            const winrateEl = document.getElementById('profile-winrate');
+            const hoursEl = document.getElementById('profile-hours');
+            const matchesEl = document.getElementById('profile-matches');
+            const killsEl = document.getElementById('profile-kills');
+            const deathsEl = document.getElementById('profile-deaths');
+            const winsEl = document.getElementById('profile-wins');
+            const lossesEl = document.getElementById('profile-losses');
+            const classEl = document.getElementById('profile-class');
+            const chivstatsEl = document.getElementById('view-chivstats');
+
+            if (rankEl) rankEl.textContent = '-';
+            if (levelEl) levelEl.textContent = playerData.lookupCount || '-';
+            if (kdEl) kdEl.textContent = '-';
+            if (winrateEl) winrateEl.textContent = '-';
+            if (hoursEl) hoursEl.textContent = '-';
+            if (matchesEl) matchesEl.textContent = '-';
+            if (killsEl) killsEl.textContent = '-';
+            if (deathsEl) deathsEl.textContent = '-';
+            if (winsEl) winsEl.textContent = '-';
+            if (lossesEl) lossesEl.textContent = '-';
+            if (classEl) classEl.textContent = 'Brak danych';
+            if (chivstatsEl) chivstatsEl.href = `https://chivalry2stats.com/player/${playfabId}`;
+
+            // Display aliases
+            const aliasesContainer = document.getElementById('profile-aliases-container');
+            const aliasesList = document.getElementById('profile-aliases-list');
+            if (aliasesList && aliasesContainer && playerData.aliases && playerData.aliases.length > 0) {
+                aliasesList.innerHTML = '';
+                playerData.aliases.forEach(alias => {
+                    const li = document.createElement('li');
+                    li.textContent = alias;
+                    aliasesList.appendChild(li);
+                });
+                aliasesContainer.classList.remove('hidden');
+            } else if (aliasesContainer) {
+                aliasesContainer.classList.add('hidden');
+            }
 
             // Add "Assign ID" button if admin and not already saved
-            if (window.isAdmin && playerId && currentPlayfabId) {
+            if (window.isAdmin && playerId && playfabId) {
                 const player = window.findPlayerById(playerId);
                 if (player && !player.playfab_id) {
-                    addAssignIdButton(playerId, playfabId, playerData.displayName || playerName);
+                    addAssignIdButton(playerId, playfabId, playerName);
                 }
             }
         } else {
@@ -131,10 +173,10 @@ async function showPlayerDetails(playfabId, playerName, playerId) {
     } catch (err) {
         console.error('Failed to load player details:', err);
         showToast('❌ Błąd ładowania - otwieram ChivalryStats', 'error');
-        loading.classList.add('hidden');
+        if (loading) loading.classList.add('hidden');
         // Fallback: open ChivalryStats
-        window.open(`https://chivalry2stats.com/player?id=${playfabId}`, '_blank');
-        modal.classList.add('hidden');
+        window.open(`https://chivalry2stats.com/player/${playfabId}`, '_blank');
+        if (modal) modal.classList.add('hidden');
     }
 }
 
