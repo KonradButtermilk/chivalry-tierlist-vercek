@@ -1,13 +1,9 @@
 // Simple player list display - separate from main script to avoid conflicts
 document.addEventListener('DOMContentLoaded', () => {
-    const ctxStats = document.getElementById('ctx-stats');
+    const ctxStatsAuto = document.getElementById('ctx-stats-auto');
 
-    if (ctxStats) {
-        // Override the ctxStats click handler
-        const newCtxStats = ctxStats.cloneNode(true);
-        ctxStats.parentNode.replaceChild(newCtxStats, ctxStats);
-
-        newCtxStats.addEventListener('click', async () => {
+    if (ctxStatsAuto) {
+        ctxStatsAuto.addEventListener('click', async () => {
             const selectedPlayerId = window.selectedPlayerId;
             if (!selectedPlayerId) return;
 
