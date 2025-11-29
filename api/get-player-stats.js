@@ -37,8 +37,10 @@ async function getPlayerStats(playerId, playerName, forceRefresh = false) {
 
         // Fetch fresh stats from scraper
         console.log(`Fetching fresh stats for player: ${playerName}`);
+
+        const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
         const scraperResponse = await fetch(
-            `${process.env.VERCEL_URL || 'http://localhost:3000'}/api/search-player?name=${encodeURIComponent(playerName)}`
+            `${baseUrl}/api/search-player?name=${encodeURIComponent(playerName)}`
         );
 
         if (!scraperResponse.ok) {
