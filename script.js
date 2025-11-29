@@ -618,30 +618,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            // Fetch stats from cache-enabled endpoint
-            const response = await fetch(`/api/get-player-stats?` + new URLSearchParams({
-                playerId: playerId,
+            // Fetch stats from correct endpoint
+            const response = await fetch(`/api/playfab-stats?` + new URLSearchParams({
                 playerName: playerName
             }));
 
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-
-            const stats = await response.json();
-
-            // Hide loading, show content
-            loading.classList.add('hidden');
-            content.classList.remove('hidden');
-
-            // Populate stats
-            document.getElementById('profile-rank').textContent = stats.global_rank || '-';
+            document.getElementById('profile-rank').textContent = stats.globalRank || stats.global_rank || '-';
             document.getElementById('profile-level').textContent = stats.level || '-';
-            document.getElementById('profile-kd').textContent = stats.kd_ratio?.toFixed(2) || '-';
-            document.getElementById('profile-winrate').textContent = stats.win_rate ? `${stats.win_rate.toFixed(1)}%` : '-';
+            document.getElementById('profile-kd').textContent = stats.kdRatio ? parseFloat(stats.kdRatio).toFixed(2) : (stats.kd_ratio?.toFixed(2) || '-');
+            document.getElementById('profile-winrate').textContent = stats.winRate ? `${parseFloat(stats.winRate).toFixed(1)}%` : (stats.win_rate ? `${stats.win_rate.toFixed(1)}%` : '-');
 
-            document.getElementById('profile-hours').textContent = stats.hours_played || '-';
-            document.getElementById('profile-matches').textContent = stats.matches_played || '-';
+            document.getElementById('profile-hours').textContent = stats.timePlayed || stats.hours_played || '-';
+            document.getElementById('profile-matches').textContent = stats.matchesPlayed || stats.matches_played || '-';
             document.getElementById('profile-kills').textContent = stats.kills || '-';
             document.getElementById('profile-deaths').textContent = stats.deaths || '-';
             document.getElementById('profile-wins').textContent = stats.wins || '-';
@@ -781,7 +769,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentPlayFabId && targetPlayerId) {
                 if (confirm('Czy na pewno chcesz przypisać to ID do gracza?')) {
                     try {
-                        const response = await fetch('/api/functions/api', {
+                        // Use the main API endpoint
+                        const response = await fetch('/api', {
                             method: 'PUT',
                             headers: {
                                 'Content-Type': 'application/json',
