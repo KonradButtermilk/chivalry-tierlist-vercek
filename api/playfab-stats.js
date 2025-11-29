@@ -10,37 +10,32 @@ module.exports = async (req, res) => {
     if (!playerName) return res.status(400).json({ error: 'Missing playerName' });
 
     try {
-        // Try ChivalryStats backend (they might have a public API)
-        // First, let's try to guess their API endpoint
-        const possibleEndpoints = [
-            `https://api.chivalry2stats.com/player/${encodeURIComponent(playerName)}`,
-            `https://chivalry2stats.com/api/player?name=${encodeURIComponent(playerName)}`,
-            `https://chivalry2stats.com/api/search?name=${encodeURIComponent(playerName)}`
-        ];
+        // Try ChivalryStats discovered endpoint
+        const endpoint = `https://chivalry2stats.com/player/usernameSearch/${encodeURIComponent(playerName)}`;
 
-        for (const endpoint of possibleEndpoints) {
-            try {
-                console.log(`Trying endpoint: ${endpoint}`);
-                const response = await fetch(endpoint, {
-                    headers: {
-                        'User-Agent': 'ChivalryTierlist/1.0',
-                        'Accept': 'application/json'
-                    }
-                });
+        console.log(`Trying discovered endpoint: ${endpoint}`);
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'User-Agent': 'ChivalryTierlist/1.0',
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Origin': 'https://chivalry2stats.com',
+                'Referer': 'https://chivalry2stats.com/player'
+            },
+            body: JSON.stringify({ page: 0, pageSize: 10 })
+        });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log(`Success with endpoint: ${endpoint}`);
-                    return res.status(200).json({
-                        success: true,
-                        source: endpoint,
-                        data: data
-                    });
-                }
-            } catch (err) {
-                console.log(`Failed endpoint ${endpoint}:`, err.message);
-                continue;
-            }
+        if (response.ok) {
+            const data = await response.json();
+            console.log(`Success with endpoint: ${endpoint}`);
+            return res.status(200).json({
+                success: true,
+                source: endpoint,
+                data: data
+            });
+        } else {
+            console.log(`Failed with status ${response.status}`);
         }
 
         // If all endpoints fail, return error
