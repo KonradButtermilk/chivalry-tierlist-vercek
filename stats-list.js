@@ -1,6 +1,8 @@
-// Player list and details display
+// Player list and details display with saved PlayFab ID support
 document.addEventListener('DOMContentLoaded', () => {
     const ctxStatsAuto = document.getElementById('ctx-stats-auto');
+    let currentPlayerId = null; // Store for "Assign ID" button
+    let currentPlayfabId = null;
 
     if (ctxStatsAuto) {
         ctxStatsAuto.addEventListener('click', async () => {
@@ -10,9 +12,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const player = window.findPlayerById(selectedPlayerId);
             if (!player) return;
 
+            currentPlayerId = player.id; // Store for later assignment
             document.getElementById('context-menu').classList.add('hidden');
 
+            // Check if player has saved playfab_id
+            if (player.playfab_id) {
+                console.log('Using saved PlayFab ID:', player.playfab_id);
+                showToast('📌 Używam zapisanego ID gracza', 'info');
+                await showPlayerDetails(player.playfab_id, player.name, player.id);
+                return;
+            }
+
             try {
+                showToast('🔍 Wyszukuję gracza...', 'info');
+
                 // Search by name first
                 const response = await fetch(`/api/playfab-stats?playerName=${encodeURIComponent(player.name)}`);
                 const data = await response.json();
@@ -22,17 +35,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // If only 1 result, fetch details immediately
                     if (players.length === 1) {
-                        await showPlayerDetails(players[0].playfabId, player.name);
+                        showToast(`✅ Znaleziono 1 gracza!`, 'success');
+                        await showPlayerDetails(players[0].playfabId, player.name, player.id);
                         return;
                     }
 
                     // Show list to choose from
-                    showPlayerList(players, player.name);
+                    showToast(`✅ Znaleziono ${players.length} graczy`, 'success');
+                    showPlayerList(players, player.name, player.id);
                 } else {
                     throw new Error('No players found');
                 }
             } catch (err) {
-                console.error(err);
+                console.error('Search error:', err);
+                showToast('❌ Nie znaleziono - używam metody ręcznej', 'error');
                 // Fallback to manual method
                 navigator.clipboard.writeText(player.name);
                 window.open('https://chivalry2stats.com/player', '_blank');
@@ -41,10 +57,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-async function showPlayerDetails(playfabId, playerName) {
+async function showPlayerDetails(playfabId, playerName, playerId) {
     const modal = document.getElementById('player-profile-modal');
     const loading = document.getElementById('profile-loading');
     const content = document.getElementById('profile-content');
+
+    currentPlayfabId = playfabId; // Store for "Assign ID" button
 
     // Show loading
     modal.classList.remove('hidden');
@@ -53,6 +71,8 @@ async function showPlayerDetails(playfabId, playerName) {
     document.getElementById('profile-player-name').textContent = playerName;
 
     try {
+        showToast('📥 Pobieranie szczegółów...', 'info');
+
         const response = await fetch(`/api/playfab-stats?playfabId=${encodeURIComponent(playfabId)}`);
         const data = await response.json();
 
@@ -61,6 +81,8 @@ async function showPlayerDetails(playfabId, playerName) {
 
             loading.classList.add('hidden');
             content.classList.remove('hidden');
+
+            showToast('✅ Załadowano profil!', 'success');
 
             // Populate modal with real data
             document.getElementById('profile-player-name').textContent = playerData.displayName || playerName;
@@ -81,11 +103,20 @@ async function showPlayerDetails(playfabId, playerName) {
             document.getElementById('profile-losses').textContent = st.losses || '-';
             document.getElementById('profile-class').textContent = st.favoriteClass || 'Brak';
             document.getElementById('view-chivstats').href = `https://chivalry2stats.com/player?id=${playfabId}`;
+
+            // Add "Assign ID" button if admin and not already saved
+            if (window.isAdmin && playerId && currentPlayfabId) {
+                const player = window.findPlayerById(playerId);
+                if (player && !player.playfab_id) {
+                    addAssignIdButton(playerId, playfabId, playerData.displayName || playerName);
+                }
+            }
         } else {
             throw new Error('No player data');
         }
     } catch (err) {
         console.error('Failed to load player details:', err);
+        showToast('❌ Błąd ładowania - otwieram ChivalryStats', 'error');
         loading.classList.add('hidden');
         // Fallback: open ChivalryStats
         window.open(`https://chivalry2stats.com/player?id=${playfabId}`, '_blank');
@@ -93,7 +124,65 @@ async function showPlayerDetails(playfabId, playerName) {
     }
 }
 
-function showPlayerList(players, searchName) {
+function addAssignIdButton(playerId, playfabId, displayName) {
+    const actions = document.querySelector('.profile-actions');
+    if (!actions) return;
+
+    // Remove existing assign button if any
+    const existing = document.getElementById('assign-playfab-id');
+    if (existing) existing.remove();
+
+    const assignBtn = document.createElement('button');
+    assignBtn.id = 'assign-playfab-id';
+    assignBtn.className = 'btn-secondary';
+    assignBtn.innerHTML = '📌 Przypisz ID do gracza';
+    assignBtn.style.background = '#ff9800';
+    assignBtn.style.borderColor = '#ff9800';
+
+    assignBtn.addEventListener('click', async () => {
+        if (confirm(`Przypisać PlayFab ID do gracza na stałe?\nNastępnym razem statystyki załadują się automatycznie.`)) {
+            try {
+                assignBtn.disabled = true;
+                assignBtn.textContent = '⏳ Przypisuję...';
+
+                const response = await fetch('/netlify/functions/api', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-admin-password': localStorage.getItem('adminPassword')
+                    },
+                    body: JSON.stringify({
+                        id: playerId,
+                        playfab_id: playfabId
+                    })
+                });
+
+                if (response.ok) {
+                    showToast('✅ ID przypisane!', 'success');
+                    assignBtn.textContent = '✅ ID Przypisane';
+                    assignBtn.style.background = '#4caf50';
+
+                    // Update local data
+                    const player = window.findPlayerById(playerId);
+                    if (player) player.playfab_id = playfabId;
+
+                    setTimeout(() => assignBtn.remove(), 2000);
+                } else {
+                    throw new Error('Failed to assign ID');
+                }
+            } catch (err) {
+                console.error('Failed to assign PlayFab ID:', err);
+                showToast('❌ Błąd przypisywania ID', 'error');
+                assignBtn.disabled = false;
+                assignBtn.textContent = '📌 Przypisz ID do gracza';
+            }
+        }
+    });
+
+    actions.insertBefore(assignBtn, actions.firstChild);
+}
+
+function showPlayerList(players, searchName, playerId) {
     const modal = document.getElementById('player-profile-modal');
     const loading = document.getElementById('profile-loading');
     const content = document.getElementById('profile-content');
@@ -113,7 +202,7 @@ function showPlayerList(players, searchName) {
                 ${players.map(p => `
                     <div class="player-list-item" data-playfab-id="${p.playfabId}" style="background: rgba(255,255,255,0.05); padding: 14px; border-radius: 6px; cursor:pointer; border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s">
                         <div style="font-size: 16px; font-weight: bold; color: #4caf50">${p.aliasHistory?.split(',')[0] || 'Unknown'}</div>
-                        <div style="font-size: 11px; color: #999; margin-top: 4px">ID: ${p.playfabId} · ${p.lookupCount || 0} lookups</div>
+                        <div style="font-size: 11px; color: #999; margin-top: 4px">ID: ${p.playfabId} · ${p.lookupCount || 0} wyszukań</div>
                         ${p.aliasHistory && p.aliasHistory.includes(',') ? `
                             <details style="margin-top: 6px">
                                 <summary style="font-size: 11px; color: #666; cursor: pointer">Historia (${p.aliasHistory.split(',').length} nicków)</summary>
@@ -131,7 +220,7 @@ function showPlayerList(players, searchName) {
         item.addEventListener('click', () => {
             const playfabId = item.dataset.playfabId;
             const displayName = item.querySelector('div').textContent;
-            showPlayerDetails(playfabId, displayName);
+            showPlayerDetails(playfabId, displayName, playerId);
         });
 
         item.addEventListener('mouseover', () => {
@@ -143,4 +232,13 @@ function showPlayerList(players, searchName) {
             item.style.borderColor = 'rgba(255,255,255,0.1)';
         });
     });
+}
+
+// Helper function for toast (use existing if available)
+function showToast(message, type = 'info') {
+    if (window.showToast) {
+        window.showToast(message, type);
+    } else {
+        console.log(`[${type.toUpperCase()}] ${message}`);
+    }
 }

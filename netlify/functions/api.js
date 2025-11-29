@@ -219,6 +219,11 @@ exports.handler = async (event, context) => {
                 values.push(description);
                 historyDetails.push(`Description updated`);
             }
+            if (body.playfab_id !== undefined && body.playfab_id !== currentPlayer.playfab_id) {
+                updates.push(`playfab_id = $${idx++}`);
+                values.push(body.playfab_id);
+                historyDetails.push(`PlayFab ID assigned: ${body.playfab_id}`);
+            }
 
             if (updates.length === 0) {
                 await client.end();
