@@ -26,6 +26,9 @@ async function scrapePlayerStats(name, retryCount = 0) {
 
         const page = await browser.newPage();
 
+        // Set User-Agent to avoid bot detection
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
         // Block resources to speed up loading
         await page.setRequestInterception(true);
         page.on('request', (req) => {
