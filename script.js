@@ -804,6 +804,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 profileModal.classList.add('hidden');
             }
         });
+    }
 
         async function movePlayer(id, newTier) {
             // Legacy single move function, kept just in case
