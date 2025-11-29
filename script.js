@@ -223,7 +223,16 @@ document.addEventListener('DOMContentLoaded', () => {
             renderTier(i);
         }
         // Update stats if available
-        if (window.updateStatistics) window.updateStatistics();
+        if (typeof updateStatistics === 'function') {
+            updateStatistics();
+        }
+    }
+
+    // Placeholder for stats update (overridden by enhancements.js if present)
+    function updateStatistics() {
+        // This function is intended to be overridden or extended
+        const event = new CustomEvent('statsUpdated');
+        document.dispatchEvent(event);
     }
 
     function renderTier(tierNum) {
