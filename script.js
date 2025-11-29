@@ -329,14 +329,46 @@ document.addEventListener('DOMContentLoaded', () => {
                     const response = await fetch(`/api/playfab-stats?playerName=${encodeURIComponent(player.name)}`);
                     const data = await response.json();
 
-                    if (data.success) {
-                        // Success! Show the data
+                    if (data.success && data.data && data.data.players && data.data.players.length > 0) {
+                        // Success! Got player data
+                        const firstPlayer = data.data.players[0];
                         showToast('✅ Pobrano statystyki!', 'success');
-                        console.log('Stats data:', data);
-                        // TODO: Display in modal
-                        alert(JSON.stringify(data.data, null, 2));
+                        console.log('Player data:', firstPlayer);
+
+                        // Show modal
+                        const modal = document.getElementById('player-profile-modal');
+                        const loading = document.getElementById('profile-loading');
+                        const content = document.getElementById('profile-content');
+
+                        modal.classList.remove('hidden');
+                        loading.classList.add('hidden');
+                        content.classList.remove('hidden');
+
+                        // Populate modal
+                        document.getElementById('profile-player-name').textContent = firstPlayer.displayName || player.name;
+
+                        // Set tier badge
+                        const tierNames = ['GOAT', 'Tier 1', 'Tier 2', 'Tier 3', 'Tier 4', 'Tier 5', 'Tier 6'];
+                        document.getElementById('profile-tier-badge').textContent = tierNames[player.tier] || `Tier ${player.tier}`;
+                        document.getElementById('profile-cache-badge').textContent = '🤖 Auto';
+                        document.getElementById('profile-cache-badge').style.borderColor = '#4caf50';
+
+                        // Fill stats (ChivalryStats API structure)
+                        const st = firstPlayer.stats || {};
+                        document.getElementById('profile-rank').textContent = st.GlobalRank || '-';
+                        document.getElementById('profile-level').textContent = st.Level || '-';
+                        document.getElementById('profile-kd').textContent = st.KDRatio ? parseFloat(st.KDRatio).toFixed(2) : '-';
+                        document.getElementById('profile-winrate').textContent = st.WinRate ? `${parseFloat(st.WinRate).toFixed(1)}%` : '-';
+                        document.getElementById('profile-hours').textContent = st.TimePlayed || '-';
+                        document.getElementById('profile-matches').textContent = st.MatchesPlayed || '-';
+                        document.getElementById('profile-kills').textContent = st.Kills || '-';
+                        document.getElementById('profile-deaths').textContent = st.Deaths || '-';
+                        document.getElementById('profile-wins').textContent = st.Wins || '-';
+                        document.getElementById('profile-losses').textContent = st.Losses || '-';
+                        document.getElementById('profile-class').textContent = st.FavoriteClass || 'Brak';
+                        document.getElementById('view-chivstats').href = 'https://chivalry2stats.com/player';
                     } else {
-                        throw new Error('API failed');
+                        throw new Error('No players found');
                     }
                 } catch (err) {
                     // Fallback to old method
