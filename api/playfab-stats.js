@@ -1,4 +1,7 @@
-// Experimental: Try to fetch stats from ChivalryStats backend or PlayFab
+// PlayFab API with discovered Title ID from community
+const TITLE_ID = 'EBF8D';
+const PLAYFAB_BASE = `https://${TITLE_ID}.playfabapi.com`;
+
 module.exports = async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -10,45 +13,45 @@ module.exports = async (req, res) => {
     if (!playerName) return res.status(400).json({ error: 'Missing playerName' });
 
     try {
-        // Try ChivalryStats discovered endpoint
-        const endpoint = `https://chivalry2stats.com/player/usernameSearch/${encodeURIComponent(playerName)}`;
-
-        console.log(`Trying discovered endpoint: ${endpoint}`);
-        const response = await fetch(endpoint, {
+        // Try to get player stats from leaderboard (public endpoint)
+        // This doesn't require authentication
+        const leaderboardResponse = await fetch(`${PLAYFAB_BASE}/Client/GetLeaderboardAroundPlayer`, {
             method: 'POST',
             headers: {
-                'User-Agent': 'ChivalryTierlist/1.0',
-                'Accept': 'application/json',
                 'Content-Type': 'application/json',
-                'Origin': 'https://chivalry2stats.com',
-                'Referer': 'https://chivalry2stats.com/player'
+                'X-PlayFabSDK': 'NodeSDK-2.0.0'
             },
-            body: JSON.stringify({ page: 0, pageSize: 10 })
+            body: JSON.stringify({
+                TitleId: TITLE_ID,
+                PlayFabId: playerName, // Try with name first
+                StatisticName: 'Kills', // Try common stat
+                MaxResultsCount: 1
+            })
         });
 
-        if (response.ok) {
-            const data = await response.json();
-            console.log(`Success with endpoint: ${endpoint}`);
+        if (leaderboardResponse.ok) {
+            const data = await leaderboardResponse.json();
             return res.status(200).json({
                 success: true,
-                source: endpoint,
+                source: 'PlayFab GetLeaderboardAroundPlayer',
                 data: data
             });
-        } else {
-            console.log(`Failed with status ${response.status}`);
         }
 
-        // If all endpoints fail, return error
+        // If that fails, return helpful error
         return res.status(404).json({
-            error: 'Could not find API endpoint',
-            message: 'ChivalryStats API endpoints are not publicly accessible or have changed'
+            error: 'PlayFab API requires authentication',
+            message: 'Public endpoints are limited. Would need Steam/Epic login to access full data.',
+            titleId: TITLE_ID,
+            suggestion: 'Use fallback method (copy + open tab)'
         });
 
     } catch (error) {
-        console.error('Stats fetch error:', error);
+        console.error('PlayFab API error:', error);
         return res.status(500).json({
             error: 'Failed to fetch stats',
-            details: error.message
+            details: error.message,
+            titleId: TITLE_ID
         });
     }
 };
