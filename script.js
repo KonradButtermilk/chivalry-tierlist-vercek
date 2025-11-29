@@ -313,6 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Context Menu Logic ---
     function showContextMenu(e, player) {
         selectedPlayerId = player.id;
+        window.selectedPlayerId = player.id; // Expose to global scope for stats-list.js
         contextMenu.style.top = `${e.clientY}px`;
         contextMenu.style.left = `${e.clientX}px`;
         contextMenu.classList.remove('hidden');
@@ -803,10 +804,206 @@ document.addEventListener('DOMContentLoaded', () => {
                 profileModal.classList.add('hidden');
             }
         });
-    }
 
-    // --- Expose functions for enhancements.js ---
-    window.loadPlayers = fetchData;
-    window.updatePlayerTier = movePlayer;
-    window.deletePlayer = deletePlayer;
-});
+        async function movePlayer(id, newTier) {
+            // Legacy single move function, kept just in case
+            const player = findAndRemoveLocal(id);
+            if (player) {
+                player.tier = newTier;
+                if (!tierData[newTier]) tierData[newTier] = [];
+                tierData[newTier].push(player);
+                renderAllTiers();
+
+                const result = await apiCall('PUT', { id, tier: newTier });
+                if (!result) {
+                    fetchData(); // Revert on error
+                }
+            }
+        }
+
+        async function deletePlayer(id) {
+            if (confirm('Czy na pewno chcesz usunąć tego gracza?')) {
+                findAndRemoveLocal(id);
+                renderAllTiers();
+                await apiCall('DELETE', { id });
+            }
+        }
+
+        function findAndRemoveLocal(id) {
+            for (let t = 0; t <= 6; t++) {
+                const idx = tierData[t].findIndex(p => p.id == id);
+                if (idx !== -1) {
+                    return tierData[t].splice(idx, 1)[0];
+                }
+            }
+            return null;
+        }
+
+        // --- Toast Notification ---
+        function showToast(message, type = 'info') {
+            let toastContainer = document.getElementById('toast-container');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'toast-container';
+                document.body.appendChild(toastContainer);
+            }
+
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+
+            toastContainer.appendChild(toast);
+
+            // Trigger reflow
+            toast.offsetHeight;
+
+            toast.classList.add('show');
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 3000);
+        }
+
+        // ===== ENHANCED PLAYER PROFILE =====
+
+        async function openPlayerProfile(playerId, playerName) {
+            const modal = document.getElementById('player-profile-modal');
+            const loading = document.getElementById('profile-loading');
+            const content = document.getElementById('profile-content');
+            const error = document.getElementById('profile-error');
+
+            // Show modal and loading state
+            modal.classList.remove('hidden');
+            loading.classList.remove('hidden');
+            content.classList.add('hidden');
+            error.classList.add('hidden');
+
+            // Set player name
+            document.getElementById('profile-player-name').textContent = playerName;
+
+            // Find player tier
+            const player = findPlayerById(playerId);
+            if (player) {
+                const tierNames = ['GOAT', 'Tier 1', 'Tier 2', 'Tier 3', 'Tier 4', 'Tier 5', 'Tier 6'];
+                document.getElementById('profile-tier-badge').textContent = tierNames[player.tier] || `Tier ${player.tier}`;
+            }
+
+            try {
+                // Fetch stats from cache-enabled endpoint
+                const response = await fetch(`/api/get-player-stats?` + new URLSearchParams({
+                    playerId: playerId,
+                    playerName: playerName
+                }));
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const stats = await response.json();
+
+                // Hide loading, show content
+                loading.classList.add('hidden');
+                content.classList.remove('hidden');
+
+                // Populate stats
+                document.getElementById('profile-rank').textContent = stats.global_rank || '-';
+                document.getElementById('profile-level').textContent = stats.level || '-';
+                document.getElementById('profile-kd').textContent = stats.kd_ratio?.toFixed(2) || '-';
+                document.getElementById('profile-winrate').textContent = stats.win_rate ? `${stats.win_rate.toFixed(1)}%` : '-';
+
+                document.getElementById('profile-hours').textContent = stats.hours_played || '-';
+                document.getElementById('profile-matches').textContent = stats.matches_played || '-';
+                document.getElementById('profile-kills').textContent = stats.kills || '-';
+                document.getElementById('profile-deaths').textContent = stats.deaths || '-';
+                document.getElementById('profile-wins').textContent = stats.wins || '-';
+                document.getElementById('profile-losses').textContent = stats.losses || '-';
+
+                document.getElementById('profile-class').textContent = stats.favorite_class || 'Brak danych';
+
+                // Set cache badge
+                const cacheBadge = document.getElementById('profile-cache-badge');
+                if (stats.fromCache) {
+                    if (stats.stale) {
+                        cacheBadge.textContent = '⚠️ Dane nieaktualne';
+                        cacheBadge.style.borderColor = '#ff9800';
+                        cacheBadge.style.color = '#ff9800';
+                    } else if (stats.cacheAge) {
+                        cacheBadge.textContent = `📦 Cache (${stats.cacheAge} min temu)`;
+                    } else {
+                        cacheBadge.textContent = '📦 Z cache';
+                    }
+                } else {
+                    cacheBadge.textContent = '✨ Świeże dane';
+                    cacheBadge.style.borderColor = '#4caf50';
+                    cacheBadge.style.color = '#4caf50';
+                }
+
+                // Set ChivalryStats link
+                document.getElementById('view-chivstats').href = `https://chivalry2stats.com/player`;
+
+            } catch (err) {
+                console.error('Profile load error:', err);
+                loading.classList.add('hidden');
+                error.classList.remove('hidden');
+                document.getElementById('profile-error-msg').textContent = err.message || 'Nieznany błąd';
+            }
+        }
+
+        // Profile modal event listeners
+        const closeProfileBtn = document.getElementById('close-profile-btn');
+        const refreshProfileBtn = document.getElementById('refresh-profile');
+        const retryProfileBtn = document.getElementById('retry-profile');
+        const profileModal = document.getElementById('player-profile-modal');
+
+        if (closeProfileBtn) {
+            closeProfileBtn.addEventListener('click', () => {
+                profileModal.classList.add('hidden');
+            });
+        }
+
+        if (refreshProfileBtn) {
+            refreshProfileBtn.addEventListener('click', async () => {
+                const playerName = document.getElementById('profile-player-name').textContent;
+                const playerId = selectedPlayerId;
+                if (playerId && playerName) {
+                    // Force refresh by adding forceRefresh parameter
+                    showToast('Odświeżanie danych...', 'info');
+                    // Close and reopen to trigger fresh fetch
+                    profileModal.classList.add('hidden');
+                    setTimeout(() => {
+                        openPlayerProfile(playerId, playerName);
+                    }, 100);
+                }
+            });
+        }
+
+        if (retryProfileBtn) {
+            retryProfileBtn.addEventListener('click', () => {
+                const playerName = document.getElementById('profile-player-name').textContent;
+                const playerId = selectedPlayerId;
+                if (playerId && playerName) {
+                    openPlayerProfile(playerId, playerName);
+                }
+            });
+        }
+
+        // Close on overlay click
+        if (profileModal) {
+            profileModal.addEventListener('click', (e) => {
+                if (e.target === profileModal || e.target.classList.contains('profile-overlay')) {
+                    profileModal.classList.add('hidden');
+                }
+            });
+        }
+
+        // --- Expose functions for enhancements.js and stats-list.js ---
+        window.loadPlayers = fetchData;
+        window.updatePlayerTier = movePlayer;
+        window.deletePlayer = deletePlayer;
+        window.updateStatistics = updateStatistics;
+        window.findPlayerById = findPlayerById;
+        window.isAdmin = isAdmin;
+    });
