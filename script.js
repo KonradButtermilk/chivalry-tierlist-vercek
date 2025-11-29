@@ -332,101 +332,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedPlayerId) {
             const player = findPlayerById(selectedPlayerId);
             if (player) {
-                // Try API first
-                showToast('🤖 Próbuję pobrać statystyki automatycznie...', 'info');
-
-                try {
-                    const response = await fetch(`/api/playfab-stats?playerName=${encodeURIComponent(player.name)}`);
-                    const data = await response.json();
-
-                    if (data.success && data.data && data.data.players && data.data.players.length > 0) {
-                        // Success! Got player data
-                        const firstPlayer = data.data.players[0];
-                        showToast('✅ Pobrano statystyki!', 'success');
-                        console.log('Player data:', firstPlayer);
-
-                        // Show modal
-                        const modal = document.getElementById('player-profile-modal');
-                        const loading = document.getElementById('profile-loading');
-                        const content = document.getElementById('profile-content');
-
-                        modal.classList.remove('hidden');
-                        loading.classList.add('hidden');
-                        content.classList.remove('hidden');
-
-                        // Populate modal
-                        document.getElementById('profile-player-name').textContent = firstPlayer.displayName || player.name;
-
-                        // Set tier badge
-                        const tierNames = ['GOAT', 'Tier 1', 'Tier 2', 'Tier 3', 'Tier 4', 'Tier 5', 'Tier 6'];
-                        document.getElementById('profile-tier-badge').textContent = tierNames[player.tier] || `Tier ${player.tier}`;
-                        document.getElementById('profile-cache-badge').textContent = '🤖 Auto';
-                        document.getElementById('profile-cache-badge').style.borderColor = '#4caf50';
-
-                        // Fill stats (ChivalryStats API structure)
-                        const st = firstPlayer.stats || {};
-                        document.getElementById('profile-rank').textContent = st.GlobalRank || '-';
-                        document.getElementById('profile-level').textContent = st.Level || '-';
-                        document.getElementById('profile-kd').textContent = st.KDRatio ? parseFloat(st.KDRatio).toFixed(2) : '-';
-                        document.getElementById('profile-winrate').textContent = st.WinRate ? `${parseFloat(st.WinRate).toFixed(1)}%` : '-';
-                        document.getElementById('profile-hours').textContent = st.TimePlayed || '-';
-                        document.getElementById('profile-matches').textContent = st.MatchesPlayed || '-';
-                        document.getElementById('profile-kills').textContent = st.Kills || '-';
-                        document.getElementById('profile-deaths').textContent = st.Deaths || '-';
-                        document.getElementById('profile-wins').textContent = st.Wins || '-';
-                        document.getElementById('profile-losses').textContent = st.Losses || '-';
-                        document.getElementById('profile-class').textContent = st.FavoriteClass || 'Brak';
-                        document.getElementById('view-chivstats').href = 'https://chivalry2stats.com/player';
-                    } else {
-                        throw new Error('No players found');
-                    }
-                } catch (err) {
-                    // Fallback to old method
-                    console.log('API failed, using fallback:', err);
-                    showToast('ℹ️ API niepubliczne - używam metody ręcznej', 'info');
-
-                    // Copy name to clipboard
-                    navigator.clipboard.writeText(player.name).then(() => {
-                        showToast(`✅ Skopiowano nick: "${player.name}"`, 'success');
-                    });
-
-                    // Open ChivalryStats in new tab
-                    window.open('https://chivalry2stats.com/player', '_blank');
-                }
+                openPlayerProfile(selectedPlayerId, player.name);
+                contextMenu.classList.add('hidden');
             }
-            contextMenu.classList.add('hidden');
         }
     });
-
-    // Toast notification function
-    function showToast(message, type = 'info') {
-        let toastContainer = document.getElementById('toast-container');
-        if (!toastContainer) {
-            toastContainer = document.createElement('div');
-            toastContainer.id = 'toast-container';
-            document.body.appendChild(toastContainer);
-        }
-
-        const toast = document.createElement('div');
-        toast.className = `toast toast-${type}`;
-        toast.textContent = message;
-        toastContainer.appendChild(toast);
-        toast.offsetHeight;
-        toast.classList.add('show');
-
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
-    }
-
-    // Stats Modal Close
-    const closeStatsBtn = document.getElementById('close-stats-btn');
-    if (closeStatsBtn) {
-        closeStatsBtn.addEventListener('click', () => {
-            document.getElementById('stats-modal').classList.add('hidden');
-        });
-    }
 
     ctxDelete.addEventListener('click', () => {
         if (selectedPlayerId) {
@@ -685,7 +595,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===== ENHANCED PLAYER PROFILE =====
 
-    async function openPlayerProfile(playerId, playerName) {
+    async function openPlayerProfile(playerId, playerName, isSearch = false) {
         const modal = document.getElementById('player-profile-modal');
         const loading = document.getElementById('profile-loading');
         const content = document.getElementById('profile-content');
@@ -758,7 +668,38 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Set ChivalryStats link
-            document.getElementById('view-chivstats').href = `https://chivalry2stats.com/player`;
+            document.getElementById('view-chivstats').href = `https://chivalry2stats.com/player/${stats.playfabId || ''}`;
+
+            // Handle Aliases
+            const aliasesList = document.getElementById('profile-aliases-list');
+            const aliasesContainer = document.getElementById('profile-aliases-container');
+            if (aliasesList && aliasesContainer) {
+                aliasesList.innerHTML = '';
+                // Check for aliases in various possible fields
+                const aliases = stats.aliases || stats.otherNames || (stats.history ? stats.history.map(h => h.name) : []);
+
+                if (aliases && aliases.length > 0) {
+                    aliasesContainer.classList.remove('hidden');
+                    aliases.forEach(alias => {
+                        const li = document.createElement('li');
+                        li.textContent = alias;
+                        aliasesList.appendChild(li);
+                    });
+                } else {
+                    aliasesContainer.classList.add('hidden');
+                }
+            }
+
+            // Handle Assign ID Button
+            const assignBtn = document.getElementById('assign-id-btn');
+            if (assignBtn) {
+                if (isAdmin && stats.playfabId) {
+                    assignBtn.classList.remove('hidden');
+                    assignBtn.dataset.playfabId = stats.playfabId;
+                } else {
+                    assignBtn.classList.add('hidden');
+                }
+            }
 
         } catch (err) {
             console.error('Profile load error:', err);
@@ -785,9 +726,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const playerName = document.getElementById('profile-player-name').textContent;
             const playerId = selectedPlayerId;
             if (playerId && playerName) {
-                // Force refresh by adding forceRefresh parameter
                 showToast('Odświeżanie danych...', 'info');
-                // Close and reopen to trigger fresh fetch
                 profileModal.classList.add('hidden');
                 setTimeout(() => {
                     openPlayerProfile(playerId, playerName);
@@ -811,6 +750,61 @@ document.addEventListener('DOMContentLoaded', () => {
         profileModal.addEventListener('click', (e) => {
             if (e.target === profileModal || e.target.classList.contains('profile-overlay')) {
                 profileModal.classList.add('hidden');
+            }
+        });
+    }
+
+    // --- New Features: Search & Assign ID ---
+    const profileSearchBtn = document.getElementById('profile-search-btn');
+    const profileSearchInput = document.getElementById('profile-search-input');
+    const assignIdBtn = document.getElementById('assign-id-btn');
+
+    if (profileSearchBtn && profileSearchInput) {
+        profileSearchBtn.addEventListener('click', () => {
+            const query = profileSearchInput.value.trim();
+            if (query) {
+                // Search for new player, keeping the original selected ID for assignment
+                openPlayerProfile(selectedPlayerId, query, true);
+            }
+        });
+
+        profileSearchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') profileSearchBtn.click();
+        });
+    }
+
+    if (assignIdBtn) {
+        assignIdBtn.addEventListener('click', async () => {
+            const currentPlayFabId = assignIdBtn.dataset.playfabId;
+            const targetPlayerId = selectedPlayerId;
+
+            if (currentPlayFabId && targetPlayerId) {
+                if (confirm('Czy na pewno chcesz przypisać to ID do gracza?')) {
+                    try {
+                        const response = await fetch('/api/functions/api', {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'x-admin-password': adminPassword
+                            },
+                            body: JSON.stringify({
+                                id: targetPlayerId,
+                                playfab_id: currentPlayFabId
+                            })
+                        });
+
+                        if (response.ok) {
+                            showToast('✅ ID przypisane pomyślnie!', 'success');
+                            const player = findPlayerById(targetPlayerId);
+                            if (player) player.playfab_id = currentPlayFabId;
+                        } else {
+                            throw new Error('Failed to update');
+                        }
+                    } catch (err) {
+                        console.error('Assign ID error:', err);
+                        showToast('❌ Błąd przypisywania ID', 'error');
+                    }
+                }
             }
         });
     }
