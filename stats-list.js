@@ -1,13 +1,26 @@
 // Player list and details display with saved PlayFab ID support
+console.log('[STATS-LIST] Script loaded');
+
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('[STATS-LIST] DOMContentLoaded fired');
+
     const ctxStatsAuto = document.getElementById('ctx-stats-auto');
+    console.log('[STATS-LIST] ctx-stats-auto element:', ctxStatsAuto);
+
     let currentPlayerId = null; // Store for "Assign ID" button
     let currentPlayfabId = null;
 
     if (ctxStatsAuto) {
+        console.log('[STATS-LIST] Adding click listener to ctx-stats-auto');
         ctxStatsAuto.addEventListener('click', async () => {
+            console.log('[STATS-LIST] Click detected!');
+            console.log('[STATS-LIST] window.selectedPlayerId:', window.selectedPlayerId);
+
             const selectedPlayerId = window.selectedPlayerId;
-            if (!selectedPlayerId) return;
+            if (!selectedPlayerId) {
+                console.warn('[STATS-LIST] No selectedPlayerId');
+                return;
+            }
 
             const player = window.findPlayerById(selectedPlayerId);
             if (!player) return;
