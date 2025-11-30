@@ -618,170 +618,263 @@ document.addEventListener('DOMContentLoaded', () => {
             const tierBadge = document.getElementById('profile-tier-badge');
             if (tierBadge) tierBadge.textContent = tierNames[player.tier] || `Tier ${player.tier}`;
         }
-        cacheBadge.style.borderColor = '#ff9800';
-        cacheBadge.style.color = '#ff9800';
-    } else if (stats.cacheAge) {
-        cacheBadge.textContent = `📦 Cache (${stats.cacheAge} min temu)`;
-    } else {
-        cacheBadge.textContent = '📦 Z cache';
-    }
-} else {
-    cacheBadge.textContent = '✨ Świeże dane';
-    cacheBadge.style.borderColor = '#4caf50';
-    cacheBadge.style.color = '#4caf50';
-}
 
-            // Set ChivalryStats link
-            document.getElementById('view-chivstats').href = `https://chivalry2stats.com/player/${stats.playfabId || ''}`;
+        try {
+            let stats;
+            let playfabId;
 
-// Handle Aliases
-const aliasesList = document.getElementById('profile-aliases-list');
-const aliasesContainer = document.getElementById('profile-aliases-container');
-if (aliasesList && aliasesContainer) {
-    aliasesList.innerHTML = '';
-    const aliases = stats.aliases || stats.otherNames || (stats.history ? stats.history.map(h => h.name) : []);
+            // 1. Check if we have stored PlayFab ID
+            if (!isSearch && player && player.playfab_id) {
+                console.log('[Profile] Has stored PlayFab ID:', player.playfab_id);
+                playfabId = player.playfab_id;
 
-    if (aliases && aliases.length > 0) {
-        aliasesContainer.classList.remove('hidden');
-        aliases.forEach(alias => {
-            const li = document.createElement('li');
-            li.textContent = alias;
-            aliasesList.appendChild(li);
-        });
-    } else {
-        aliasesContainer.classList.add('hidden');
-    }
-}
-
-// Handle Assign ID Button
-const assignBtn = document.getElementById('assign-id-btn');
-if (assignBtn) {
-    if (isAdmin && stats.playfabId) {
-        assignBtn.classList.remove('hidden');
-        assignBtn.dataset.playfabId = stats.playfabId;
-    } else {
-        assignBtn.classList.add('hidden');
-    }
-}
-
-// Show content
-content.classList.remove('hidden');
-
-        } catch (err) {
-    console.error('Profile load error:', err);
-    error.classList.remove('hidden');
-    document.getElementById('profile-error-msg').textContent = err.message || 'Nieznany błąd';
-} finally {
-    loading.classList.add('hidden');
-}
-    }
-
-// Profile modal event listeners
-const closeProfileBtn = document.getElementById('close-profile-btn');
-const refreshProfileBtn = document.getElementById('refresh-profile');
-const retryProfileBtn = document.getElementById('retry-profile');
-const profileModal = document.getElementById('player-profile-modal');
-
-if (closeProfileBtn) {
-    closeProfileBtn.addEventListener('click', () => {
-        profileModal.classList.add('hidden');
-    });
-}
-
-if (refreshProfileBtn) {
-    refreshProfileBtn.addEventListener('click', async () => {
-        const playerName = document.getElementById('profile-player-name').textContent;
-        const playerId = selectedPlayerId;
-        if (playerId && playerName) {
-            showToast('Odświeżanie danych...', 'info');
-            profileModal.classList.add('hidden');
-            setTimeout(() => {
-                openPlayerProfile(playerId, playerName);
-            }, 100);
-        }
-    });
-}
-
-if (retryProfileBtn) {
-    retryProfileBtn.addEventListener('click', () => {
-        const playerName = document.getElementById('profile-player-name').textContent;
-        const playerId = selectedPlayerId;
-        if (playerId && playerName) {
-            openPlayerProfile(playerId, playerName);
-        }
-    });
-}
-
-// Close on overlay click
-if (profileModal) {
-    profileModal.addEventListener('click', (e) => {
-        if (e.target === profileModal || e.target.classList.contains('profile-overlay')) {
-            profileModal.classList.add('hidden');
-        }
-    });
-}
-
-// --- New Features: Search & Assign ID ---
-const profileSearchBtn = document.getElementById('profile-search-btn');
-const profileSearchInput = document.getElementById('profile-search-input');
-const assignIdBtn = document.getElementById('assign-id-btn');
-
-if (profileSearchBtn && profileSearchInput) {
-    profileSearchBtn.addEventListener('click', () => {
-        const query = profileSearchInput.value.trim();
-        if (query) {
-            // Search for new player, keeping the original selected ID for assignment
-            openPlayerProfile(selectedPlayerId, query, true);
-        }
-    });
-
-    profileSearchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') profileSearchBtn.click();
-    });
-}
-
-if (assignIdBtn) {
-    assignIdBtn.addEventListener('click', async () => {
-        const currentPlayFabId = assignIdBtn.dataset.playfabId;
-        const targetPlayerId = selectedPlayerId;
-
-        if (currentPlayFabId && targetPlayerId) {
-            if (confirm('Czy na pewno chcesz przypisać to ID do gracza?')) {
+                // Try to fetch full stats directly
                 try {
-                    // Use the main API endpoint
-                    const response = await fetch('/api', {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'x-admin-password': adminPassword
-                        },
-                        body: JSON.stringify({
-                            id: targetPlayerId,
-                            playfab_id: currentPlayFabId
-                        })
-                    });
+                    const response = await fetch(`/api/playfab-stats?playfabId=${player.playfab_id}`);
+                    const data = await response.json();
 
-                    if (response.ok) {
-                        showToast('✅ ID przypisane pomyślnie!', 'success');
-                        const player = findPlayerById(targetPlayerId);
-                        if (player) player.playfab_id = currentPlayFabId;
-                    } else {
-                        throw new Error('Failed to update');
+                    if (data.success && data.data) {
+                        stats = data.data;
+                        stats.playfabId = player.playfab_id;
+                        console.log('[Profile] Got detailed stats from stored ID');
                     }
                 } catch (err) {
-                    console.error('Assign ID error:', err);
-                    showToast('❌ Błąd przypisywania ID', 'error');
+                    console.warn('[Profile] Failed to fetch by stored ID, will search by name:', err);
                 }
             }
-        }
-    });
-}
 
-// --- Expose functions for enhancements.js and stats-list.js ---
-window.loadPlayers = fetchData;
-window.updatePlayerTier = movePlayer;
-window.deletePlayer = deletePlayer;
-window.updateStatistics = updateStatistics;
-window.findPlayerById = findPlayerById;
-window.isAdmin = isAdmin;
+            // 2. If no stats yet, search by name
+            if (!stats) {
+                console.log('[Profile] Searching by name:', playerName);
+                const response = await fetch(`/api/playfab-stats?` + new URLSearchParams({
+                    playerName: playerName
+                }));
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error || data.details || 'Brak danych');
+                }
+
+                // The API returns { players: [...] } with search results
+                if (data.data && data.data.players && data.data.players.length > 0) {
+                    // Find the best match (prefer exact match or first result)
+                    let bestMatch = data.data.players[0];
+
+                    // If we have a stored PlayFab ID, try to find exact match
+                    if (playfabId) {
+                        const exactMatch = data.data.players.find(p => p.playfabId === playfabId);
+                        if (exactMatch) bestMatch = exactMatch;
+                    }
+
+                    playfabId = bestMatch.playfabId || bestMatch.id;
+
+                    // Now fetch full details using the PlayFab ID
+                    console.log('[Profile] Fetching detailed stats for:', playfabId);
+                    const detailResponse = await fetch(`/api/playfab-stats?playfabId=${playfabId}`);
+                    const detailData = await detailResponse.json();
+
+                    if (detailData.success && detailData.data) {
+                        stats = detailData.data;
+                        stats.playfabId = playfabId;
+                        console.log('[Profile] Got detailed stats from search');
+                    } else {
+                        throw new Error(detailData.error || detailData.details || 'Nie udało się pobrać szczegółów gracza');
+                    }
+                } else {
+                    throw new Error('Nie znaleziono gracza');
+                }
+            }
+
+            // Calculate derived stats from raw data
+            const playtime = stats.totalPlaytime || stats.playtimeex || stats.playtime || 0;
+            const playtimeHours = playtime > 0 ? Math.round(playtime / 3600) : 0;
+            const globalRank = stats.globalXpPosition || stats.global_rank || '-';
+            const globalXp = stats.globalXp || 0;
+            const level = globalXp > 0 ? Math.floor(globalXp / 1000) : '-';
+
+            // Render Stats (with real data from leaderboard API)
+            const rankEl = document.getElementById('profile-rank');
+            const levelEl = document.getElementById('profile-level');
+            const kdEl = document.getElementById('profile-kd');
+            const winrateEl = document.getElementById('profile-winrate');
+            const hoursEl = document.getElementById('profile-hours');
+            const matchesEl = document.getElementById('profile-matches');
+            const killsEl = document.getElementById('profile-kills');
+            const deathsEl = document.getElementById('profile-deaths');
+            const winsEl = document.getElementById('profile-wins');
+            const lossesEl = document.getElementById('profile-losses');
+            const classEl = document.getElementById('profile-class');
+
+            if (rankEl) rankEl.textContent = globalRank || '-';
+            if (levelEl) levelEl.textContent = level || '-';
+            if (kdEl) kdEl.textContent = '-'; // K/D not directly available in leaderboard stats
+            if (winrateEl) winrateEl.textContent = '-'; // Win rate not available
+            if (hoursEl) hoursEl.textContent = playtimeHours > 0 ? `${playtimeHours}h` : '-';
+            if (matchesEl) matchesEl.textContent = '-'; // Matches not in leaderboard data
+            if (killsEl) killsEl.textContent = '-';
+            if (deathsEl) deathsEl.textContent = '-';
+            if (winsEl) winsEl.textContent = '-';
+            if (lossesEl) lossesEl.textContent = '-';
+
+            // Determine favorite class from experience values
+            let favoriteClass = 'Brak danych';
+            const classExp = {
+                'Knight': stats.experienceKnight || 0,
+                'Vanguard': stats.experienceVanguard || 0,
+                'Footman': stats.experienceFootman || 0,
+                'Archer': stats.experienceArcher || 0
+            };
+            const maxClass = Object.entries(classExp).reduce((a, b) => a[1] > b[1] ? a : b);
+            if (maxClass[1] > 0) favoriteClass = maxClass[0];
+
+            if (classEl) classEl.textContent = favoriteClass;
+
+            // Set cache badge
+            const cacheBadge = document.getElementById('profile-cache-badge');
+            if (cacheBadge) {
+                cacheBadge.textContent = '✨ Świeże dane';
+                cacheBadge.style.borderColor = '#4caf50';
+                if (aliases && aliases.length > 0) {
+                    aliasesContainer.classList.remove('hidden');
+                    aliases.forEach(alias => {
+                        const li = document.createElement('li');
+                        li.textContent = alias;
+                        aliasesList.appendChild(li);
+                    });
+                } else {
+                    aliasesContainer.classList.add('hidden');
+                }
+            }
+
+            // Handle Assign ID Button
+            const assignBtn = document.getElementById('assign-id-btn');
+            if (assignBtn) {
+                if (isAdmin && stats.playfabId) {
+                    assignBtn.classList.remove('hidden');
+                    assignBtn.dataset.playfabId = stats.playfabId;
+                } else {
+                    assignBtn.classList.add('hidden');
+                }
+            }
+
+            // Show content
+            content.classList.remove('hidden');
+
+        } catch (err) {
+            console.error('Profile load error:', err);
+            error.classList.remove('hidden');
+            document.getElementById('profile-error-msg').textContent = err.message || 'Nieznany błąd';
+        } finally {
+            loading.classList.add('hidden');
+        }
+    }
+
+    // Profile modal event listeners
+    const closeProfileBtn = document.getElementById('close-profile-btn');
+    const refreshProfileBtn = document.getElementById('refresh-profile');
+    const retryProfileBtn = document.getElementById('retry-profile');
+    const profileModal = document.getElementById('player-profile-modal');
+
+    if (closeProfileBtn) {
+        closeProfileBtn.addEventListener('click', () => {
+            profileModal.classList.add('hidden');
+        });
+    }
+
+    if (refreshProfileBtn) {
+        refreshProfileBtn.addEventListener('click', async () => {
+            const playerName = document.getElementById('profile-player-name').textContent;
+            const playerId = selectedPlayerId;
+            if (playerId && playerName) {
+                showToast('Odświeżanie danych...', 'info');
+                profileModal.classList.add('hidden');
+                setTimeout(() => {
+                    openPlayerProfile(playerId, playerName);
+                }, 100);
+            }
+        });
+    }
+
+    if (retryProfileBtn) {
+        retryProfileBtn.addEventListener('click', () => {
+            const playerName = document.getElementById('profile-player-name').textContent;
+            const playerId = selectedPlayerId;
+            if (playerId && playerName) {
+                openPlayerProfile(playerId, playerName);
+            }
+        });
+    }
+
+    // Close on overlay click
+    if (profileModal) {
+        profileModal.addEventListener('click', (e) => {
+            if (e.target === profileModal || e.target.classList.contains('profile-overlay')) {
+                profileModal.classList.add('hidden');
+            }
+        });
+    }
+
+    // --- New Features: Search & Assign ID ---
+    const profileSearchBtn = document.getElementById('profile-search-btn');
+    const profileSearchInput = document.getElementById('profile-search-input');
+    const assignIdBtn = document.getElementById('assign-id-btn');
+
+    if (profileSearchBtn && profileSearchInput) {
+        profileSearchBtn.addEventListener('click', () => {
+            const query = profileSearchInput.value.trim();
+            if (query) {
+                // Search for new player, keeping the original selected ID for assignment
+                openPlayerProfile(selectedPlayerId, query, true);
+            }
+        });
+
+        profileSearchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') profileSearchBtn.click();
+        });
+    }
+
+    if (assignIdBtn) {
+        assignIdBtn.addEventListener('click', async () => {
+            const currentPlayFabId = assignIdBtn.dataset.playfabId;
+            const targetPlayerId = selectedPlayerId;
+
+            if (currentPlayFabId && targetPlayerId) {
+                if (confirm('Czy na pewno chcesz przypisać to ID do gracza?')) {
+                    try {
+                        // Use the main API endpoint
+                        const response = await fetch('/api', {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'x-admin-password': adminPassword
+                            },
+                            body: JSON.stringify({
+                                id: targetPlayerId,
+                                playfab_id: currentPlayFabId
+                            })
+                        });
+
+                        if (response.ok) {
+                            showToast('✅ ID przypisane pomyślnie!', 'success');
+                            const player = findPlayerById(targetPlayerId);
+                            if (player) player.playfab_id = currentPlayFabId;
+                        } else {
+                            throw new Error('Failed to update');
+                        }
+                    } catch (err) {
+                        console.error('Assign ID error:', err);
+                        showToast('❌ Błąd przypisywania ID', 'error');
+                    }
+                }
+            }
+        });
+    }
+
+    // --- Expose functions for enhancements.js and stats-list.js ---
+    window.loadPlayers = fetchData;
+    window.updatePlayerTier = movePlayer;
+    window.deletePlayer = deletePlayer;
+    window.updateStatistics = updateStatistics;
+    window.findPlayerById = findPlayerById;
+    window.isAdmin = isAdmin;
 });
