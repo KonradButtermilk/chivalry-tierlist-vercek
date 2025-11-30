@@ -618,264 +618,170 @@ document.addEventListener('DOMContentLoaded', () => {
             const tierBadge = document.getElementById('profile-tier-badge');
             if (tierBadge) tierBadge.textContent = tierNames[player.tier] || `Tier ${player.tier}`;
         }
-
-        try {
-            let stats;
-            let playfabId;
-
-            // 1. Try to fetch via stored PlayFab ID (but this will now return an error)
-            if (!isSearch && player && player.playfab_id) {
-                console.log('[Profile] Has stored PlayFab ID:', player.playfab_id);
-                playfabId = player.playfab_id;
-                // We'll search by name anyway since the ID endpoint is broken
-            }
-
-            // 2. Always search by name (since PlayFab ID endpoint is deprecated)
-            console.log('[Profile] Searching by name:', playerName);
-            const response = await fetch(`/api/playfab-stats?` + new URLSearchParams({
-                playerName: playerName
-            }));
-            const data = await response.json();
-
-            if (!data.success) {
-                throw new Error(data.error || data.details || 'Brak danych');
-            }
-
-            // The API returns { players: [...] } with search results
-            if (data.data && data.data.players && data.data.players.length > 0) {
-                // Find the best match (prefer exact match or first result)
-                let bestMatch = data.data.players[0];
-
-                // If we have a stored PlayFab ID, try to find exact match
-                if (playfabId) {
-                    const exactMatch = data.data.players.find(p => p.playfabId === playfabId);
-                    if (exactMatch) bestMatch = exactMatch;
-                }
-
-                // Map search result to stats format
-                stats = {
-                    playfabId: bestMatch.playfabId || bestMatch.id,
-                    // Search results don't have detailed stats, only metadata
-                    lookupCount: bestMatch.lookupCount || 0,
-                    lastLookup: bestMatch.lastLookup || bestMatch.lastSeen,
-                    previousLookup: bestMatch.previousLookup,
-                    supporter: bestMatch.supporter || false,
-                    aliases: bestMatch.aliases || [],
-                    aliasHistory: bestMatch.aliasHistory || '',
-
-                    // Display-friendly values (we don't have full stats from search)
-                    globalRank: '-',
-                    level: bestMatch.lookupCount || '-', // Use lookup count as proxy
-                    kdRatio: '-',
-                    winRate: '-',
-                    timePlayed: '-',
-                    matchesPlayed: '-',
-                    kills: '-',
-                    deaths: '-',
-                    wins: '-',
-                    losses: '-',
-                    favoriteClass: 'Brak danych'
-                };
-
-                console.log('[Profile] Using search result:', stats);
-            } else {
-                throw new Error('Nie znaleziono gracza');
-            }
-
-            // Render Stats (with fallbacks for missing data)
-            const rankEl = document.getElementById('profile-rank');
-            const levelEl = document.getElementById('profile-level');
-            const kdEl = document.getElementById('profile-kd');
-            const winrateEl = document.getElementById('profile-winrate');
-            const hoursEl = document.getElementById('profile-hours');
-            const matchesEl = document.getElementById('profile-matches');
-            const killsEl = document.getElementById('profile-kills');
-            const deathsEl = document.getElementById('profile-deaths');
-            const winsEl = document.getElementById('profile-wins');
-            const lossesEl = document.getElementById('profile-losses');
-            const classEl = document.getElementById('profile-class');
-
-            if (rankEl) rankEl.textContent = stats.globalRank || stats.global_rank || '-';
-            if (levelEl) levelEl.textContent = stats.level || '-';
-            if (kdEl) kdEl.textContent = stats.kdRatio ? parseFloat(stats.kdRatio).toFixed(2) : (stats.kd_ratio?.toFixed(2) || '-');
-            if (winrateEl) winrateEl.textContent = stats.winRate ? `${parseFloat(stats.winRate).toFixed(1)}%` : (stats.win_rate ? `${stats.win_rate.toFixed(1)}%` : '-');
-            if (hoursEl) hoursEl.textContent = stats.timePlayed || stats.hours_played || '-';
-            if (matchesEl) matchesEl.textContent = stats.matchesPlayed || stats.matches_played || stats.lookupCount || '-';
-            if (killsEl) killsEl.textContent = stats.kills || '-';
-            if (deathsEl) deathsEl.textContent = stats.deaths || '-';
-            if (winsEl) winsEl.textContent = stats.wins || '-';
-            if (lossesEl) lossesEl.textContent = stats.losses || '-';
-            if (classEl) classEl.textContent = stats.favorite_class || stats.favoriteClass || 'Brak danych';
-
-            // Set cache badge
-            const cacheBadge = document.getElementById('profile-cache-badge');
-            if (stats.fromCache) {
-                if (stats.stale) {
-                    cacheBadge.textContent = '⚠️ Dane nieaktualne';
-                    cacheBadge.style.borderColor = '#ff9800';
-                    cacheBadge.style.color = '#ff9800';
-                } else if (stats.cacheAge) {
-                    cacheBadge.textContent = `📦 Cache (${stats.cacheAge} min temu)`;
-                } else {
-                    cacheBadge.textContent = '📦 Z cache';
-                }
-            } else {
-                cacheBadge.textContent = '✨ Świeże dane';
-                cacheBadge.style.borderColor = '#4caf50';
-                cacheBadge.style.color = '#4caf50';
-            }
+        cacheBadge.style.borderColor = '#ff9800';
+        cacheBadge.style.color = '#ff9800';
+    } else if (stats.cacheAge) {
+        cacheBadge.textContent = `📦 Cache (${stats.cacheAge} min temu)`;
+    } else {
+        cacheBadge.textContent = '📦 Z cache';
+    }
+} else {
+    cacheBadge.textContent = '✨ Świeże dane';
+    cacheBadge.style.borderColor = '#4caf50';
+    cacheBadge.style.color = '#4caf50';
+}
 
             // Set ChivalryStats link
             document.getElementById('view-chivstats').href = `https://chivalry2stats.com/player/${stats.playfabId || ''}`;
 
-            // Handle Aliases
-            const aliasesList = document.getElementById('profile-aliases-list');
-            const aliasesContainer = document.getElementById('profile-aliases-container');
-            if (aliasesList && aliasesContainer) {
-                aliasesList.innerHTML = '';
-                const aliases = stats.aliases || stats.otherNames || (stats.history ? stats.history.map(h => h.name) : []);
+// Handle Aliases
+const aliasesList = document.getElementById('profile-aliases-list');
+const aliasesContainer = document.getElementById('profile-aliases-container');
+if (aliasesList && aliasesContainer) {
+    aliasesList.innerHTML = '';
+    const aliases = stats.aliases || stats.otherNames || (stats.history ? stats.history.map(h => h.name) : []);
 
-                if (aliases && aliases.length > 0) {
-                    aliasesContainer.classList.remove('hidden');
-                    aliases.forEach(alias => {
-                        const li = document.createElement('li');
-                        li.textContent = alias;
-                        aliasesList.appendChild(li);
-                    });
-                } else {
-                    aliasesContainer.classList.add('hidden');
-                }
-            }
+    if (aliases && aliases.length > 0) {
+        aliasesContainer.classList.remove('hidden');
+        aliases.forEach(alias => {
+            const li = document.createElement('li');
+            li.textContent = alias;
+            aliasesList.appendChild(li);
+        });
+    } else {
+        aliasesContainer.classList.add('hidden');
+    }
+}
 
-            // Handle Assign ID Button
-            const assignBtn = document.getElementById('assign-id-btn');
-            if (assignBtn) {
-                if (isAdmin && stats.playfabId) {
-                    assignBtn.classList.remove('hidden');
-                    assignBtn.dataset.playfabId = stats.playfabId;
-                } else {
-                    assignBtn.classList.add('hidden');
-                }
-            }
+// Handle Assign ID Button
+const assignBtn = document.getElementById('assign-id-btn');
+if (assignBtn) {
+    if (isAdmin && stats.playfabId) {
+        assignBtn.classList.remove('hidden');
+        assignBtn.dataset.playfabId = stats.playfabId;
+    } else {
+        assignBtn.classList.add('hidden');
+    }
+}
 
-            // Show content
-            content.classList.remove('hidden');
+// Show content
+content.classList.remove('hidden');
 
         } catch (err) {
-            console.error('Profile load error:', err);
-            error.classList.remove('hidden');
-            document.getElementById('profile-error-msg').textContent = err.message || 'Nieznany błąd';
-        } finally {
-            loading.classList.add('hidden');
-        }
+    console.error('Profile load error:', err);
+    error.classList.remove('hidden');
+    document.getElementById('profile-error-msg').textContent = err.message || 'Nieznany błąd';
+} finally {
+    loading.classList.add('hidden');
+}
     }
 
-    // Profile modal event listeners
-    const closeProfileBtn = document.getElementById('close-profile-btn');
-    const refreshProfileBtn = document.getElementById('refresh-profile');
-    const retryProfileBtn = document.getElementById('retry-profile');
-    const profileModal = document.getElementById('player-profile-modal');
+// Profile modal event listeners
+const closeProfileBtn = document.getElementById('close-profile-btn');
+const refreshProfileBtn = document.getElementById('refresh-profile');
+const retryProfileBtn = document.getElementById('retry-profile');
+const profileModal = document.getElementById('player-profile-modal');
 
-    if (closeProfileBtn) {
-        closeProfileBtn.addEventListener('click', () => {
+if (closeProfileBtn) {
+    closeProfileBtn.addEventListener('click', () => {
+        profileModal.classList.add('hidden');
+    });
+}
+
+if (refreshProfileBtn) {
+    refreshProfileBtn.addEventListener('click', async () => {
+        const playerName = document.getElementById('profile-player-name').textContent;
+        const playerId = selectedPlayerId;
+        if (playerId && playerName) {
+            showToast('Odświeżanie danych...', 'info');
             profileModal.classList.add('hidden');
-        });
-    }
-
-    if (refreshProfileBtn) {
-        refreshProfileBtn.addEventListener('click', async () => {
-            const playerName = document.getElementById('profile-player-name').textContent;
-            const playerId = selectedPlayerId;
-            if (playerId && playerName) {
-                showToast('Odświeżanie danych...', 'info');
-                profileModal.classList.add('hidden');
-                setTimeout(() => {
-                    openPlayerProfile(playerId, playerName);
-                }, 100);
-            }
-        });
-    }
-
-    if (retryProfileBtn) {
-        retryProfileBtn.addEventListener('click', () => {
-            const playerName = document.getElementById('profile-player-name').textContent;
-            const playerId = selectedPlayerId;
-            if (playerId && playerName) {
+            setTimeout(() => {
                 openPlayerProfile(playerId, playerName);
-            }
-        });
-    }
+            }, 100);
+        }
+    });
+}
 
-    // Close on overlay click
-    if (profileModal) {
-        profileModal.addEventListener('click', (e) => {
-            if (e.target === profileModal || e.target.classList.contains('profile-overlay')) {
-                profileModal.classList.add('hidden');
-            }
-        });
-    }
+if (retryProfileBtn) {
+    retryProfileBtn.addEventListener('click', () => {
+        const playerName = document.getElementById('profile-player-name').textContent;
+        const playerId = selectedPlayerId;
+        if (playerId && playerName) {
+            openPlayerProfile(playerId, playerName);
+        }
+    });
+}
 
-    // --- New Features: Search & Assign ID ---
-    const profileSearchBtn = document.getElementById('profile-search-btn');
-    const profileSearchInput = document.getElementById('profile-search-input');
-    const assignIdBtn = document.getElementById('assign-id-btn');
+// Close on overlay click
+if (profileModal) {
+    profileModal.addEventListener('click', (e) => {
+        if (e.target === profileModal || e.target.classList.contains('profile-overlay')) {
+            profileModal.classList.add('hidden');
+        }
+    });
+}
 
-    if (profileSearchBtn && profileSearchInput) {
-        profileSearchBtn.addEventListener('click', () => {
-            const query = profileSearchInput.value.trim();
-            if (query) {
-                // Search for new player, keeping the original selected ID for assignment
-                openPlayerProfile(selectedPlayerId, query, true);
-            }
-        });
+// --- New Features: Search & Assign ID ---
+const profileSearchBtn = document.getElementById('profile-search-btn');
+const profileSearchInput = document.getElementById('profile-search-input');
+const assignIdBtn = document.getElementById('assign-id-btn');
 
-        profileSearchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') profileSearchBtn.click();
-        });
-    }
+if (profileSearchBtn && profileSearchInput) {
+    profileSearchBtn.addEventListener('click', () => {
+        const query = profileSearchInput.value.trim();
+        if (query) {
+            // Search for new player, keeping the original selected ID for assignment
+            openPlayerProfile(selectedPlayerId, query, true);
+        }
+    });
 
-    if (assignIdBtn) {
-        assignIdBtn.addEventListener('click', async () => {
-            const currentPlayFabId = assignIdBtn.dataset.playfabId;
-            const targetPlayerId = selectedPlayerId;
+    profileSearchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') profileSearchBtn.click();
+    });
+}
 
-            if (currentPlayFabId && targetPlayerId) {
-                if (confirm('Czy na pewno chcesz przypisać to ID do gracza?')) {
-                    try {
-                        // Use the main API endpoint
-                        const response = await fetch('/api', {
-                            method: 'PUT',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'x-admin-password': adminPassword
-                            },
-                            body: JSON.stringify({
-                                id: targetPlayerId,
-                                playfab_id: currentPlayFabId
-                            })
-                        });
+if (assignIdBtn) {
+    assignIdBtn.addEventListener('click', async () => {
+        const currentPlayFabId = assignIdBtn.dataset.playfabId;
+        const targetPlayerId = selectedPlayerId;
 
-                        if (response.ok) {
-                            showToast('✅ ID przypisane pomyślnie!', 'success');
-                            const player = findPlayerById(targetPlayerId);
-                            if (player) player.playfab_id = currentPlayFabId;
-                        } else {
-                            throw new Error('Failed to update');
-                        }
-                    } catch (err) {
-                        console.error('Assign ID error:', err);
-                        showToast('❌ Błąd przypisywania ID', 'error');
+        if (currentPlayFabId && targetPlayerId) {
+            if (confirm('Czy na pewno chcesz przypisać to ID do gracza?')) {
+                try {
+                    // Use the main API endpoint
+                    const response = await fetch('/api', {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-admin-password': adminPassword
+                        },
+                        body: JSON.stringify({
+                            id: targetPlayerId,
+                            playfab_id: currentPlayFabId
+                        })
+                    });
+
+                    if (response.ok) {
+                        showToast('✅ ID przypisane pomyślnie!', 'success');
+                        const player = findPlayerById(targetPlayerId);
+                        if (player) player.playfab_id = currentPlayFabId;
+                    } else {
+                        throw new Error('Failed to update');
                     }
+                } catch (err) {
+                    console.error('Assign ID error:', err);
+                    showToast('❌ Błąd przypisywania ID', 'error');
                 }
             }
-        });
-    }
+        }
+    });
+}
 
-    // --- Expose functions for enhancements.js and stats-list.js ---
-    window.loadPlayers = fetchData;
-    window.updatePlayerTier = movePlayer;
-    window.deletePlayer = deletePlayer;
-    window.updateStatistics = updateStatistics;
-    window.findPlayerById = findPlayerById;
-    window.isAdmin = isAdmin;
+// --- Expose functions for enhancements.js and stats-list.js ---
+window.loadPlayers = fetchData;
+window.updatePlayerTier = movePlayer;
+window.deletePlayer = deletePlayer;
+window.updateStatistics = updateStatistics;
+window.findPlayerById = findPlayerById;
+window.isAdmin = isAdmin;
 });
