@@ -96,29 +96,49 @@ async function showPlayerDetails(playfabId, playerName, playerId) {
             throw new Error(data.error || 'No player data');
         }
 
-        // Find the matching player by PlayFab ID
-        let playerData = data.data.players.find(p => p.playfabId === playfabId);
-        if (!playerData) {
-            // Fallback to first result if exact match not found
-            playerData = data.data.players[0];
+        // Now fetch full detailed stats using PlayFab ID
+        console.log('[STATS-LIST] Fetching detailed stats for:', playfabId);
+        const detailResponse = await fetch(`/api/playfab-stats?playfabId=${playfabId}`);
+        const detailData = await detailResponse.json();
+
+        let stats;
+        if (detailData.success && detailData.data) {
+            stats = detailData.data;
+            console.log('[STATS-LIST] Got detailed stats from leaderboard');
+        } else {
+            // Fallback to search data if leaderboard fails
+            console.warn('[STATS-LIST] Leaderboard failed, using search data');
+            const searchMatch = data.data.players.find(p => p.playfabId === playfabId) || data.data.players[0];
+            stats = searchMatch;
         }
 
-        if (playerData) {
-            loading.classList.add('hidden');
-            content.classList.remove('hidden');
+        if (stats) {
+            if (loading) loading.classList.add('hidden');
+            if (content) content.classList.remove('hidden');
 
             showToast('✅ Załadowano profil!', 'success');
 
-            // Populate modal with data from search results
+            // Calculate derived stats
+            const playtime = stats.totalPlaytime || stats.playtimeex || stats.playtime || 0;
+            const playtimeHours = playtime > 0 ? Math.round(playtime / 3600) : 0;
+            const globalRank = stats.globalXpPosition || stats.global_rank || '-';
+            const globalXp = stats.globalXp || 0;
+            const level = globalXp > 0 ? Math.floor(globalXp / 1000) : '-';
+
+            // Populate modal
             const nameEl = document.getElementById('profile-player-name');
             const tierBadgeEl = document.getElementById('profile-tier-badge');
             const cacheBadgeEl = document.getElementById('profile-cache-badge');
 
             if (nameEl) nameEl.textContent = playerName;
             if (tierBadgeEl) tierBadgeEl.textContent = '🤖 Auto';
-            if (cacheBadgeEl) cacheBadgeEl.textContent = `🔎 ${playerData.lookupCount || 0} wyszukań`;
+            if (cacheBadgeEl) {
+                cacheBadgeEl.textContent = '✨ Świeże dane';
+                cacheBadgeEl.style.borderColor = '#4caf50';
+                cacheBadgeEl.style.color = '#4caf50';
+            }
 
-            // Fill stats (search results have limited data)
+            // Fill stats with real data
             const rankEl = document.getElementById('profile-rank');
             const levelEl = document.getElementById('profile-level');
             const kdEl = document.getElementById('profile-kd');
@@ -132,25 +152,39 @@ async function showPlayerDetails(playfabId, playerName, playerId) {
             const classEl = document.getElementById('profile-class');
             const chivstatsEl = document.getElementById('view-chivstats');
 
-            if (rankEl) rankEl.textContent = '-';
-            if (levelEl) levelEl.textContent = playerData.lookupCount || '-';
-            if (kdEl) kdEl.textContent = '-';
-            if (winrateEl) winrateEl.textContent = '-';
-            if (hoursEl) hoursEl.textContent = '-';
+            if (rankEl) rankEl.textContent = globalRank || '-';
+            if (levelEl) levelEl.textContent = level || '-';
+            if (kdEl) kdEl.textContent = '-'; // K/D not in leaderboard data
+            if (winrateEl) winrateEl.textContent = '-'; // Win rate not available
+            if (hoursEl) hoursEl.textContent = playtimeHours > 0 ? `${playtimeHours}h` : '-';
             if (matchesEl) matchesEl.textContent = '-';
             if (killsEl) killsEl.textContent = '-';
             if (deathsEl) deathsEl.textContent = '-';
             if (winsEl) winsEl.textContent = '-';
             if (lossesEl) lossesEl.textContent = '-';
-            if (classEl) classEl.textContent = 'Brak danych';
+
+            // Determine favorite class
+            let favoriteClass = 'Brak danych';
+            const classExp = {
+                'Knight': stats.experienceKnight || 0,
+                'Vanguard': stats.experienceVanguard || 0,
+                'Footman': stats.experienceFootman || 0,
+                'Archer': stats.experienceArcher || 0
+            };
+            const maxClass = Object.entries(classExp).reduce((a, b) => a[1] > b[1] ? a : b, ['', 0]);
+            if (maxClass[1] > 0) favoriteClass = maxClass[0];
+
+            if (classEl) classEl.textContent = favoriteClass;
             if (chivstatsEl) chivstatsEl.href = `https://chivalry2stats.com/player/${playfabId}`;
 
-            // Display aliases
+            // Display aliases (from search data or stats)
             const aliasesContainer = document.getElementById('profile-aliases-container');
             const aliasesList = document.getElementById('profile-aliases-list');
-            if (aliasesList && aliasesContainer && playerData.aliases && playerData.aliases.length > 0) {
+            const aliases = stats.aliases || (stats.aliasHistory ? stats.aliasHistory.split(',').map(a => a.trim()).filter(Boolean) : []);
+
+            if (aliasesList && aliasesContainer && aliases && aliases.length > 0) {
                 aliasesList.innerHTML = '';
-                playerData.aliases.forEach(alias => {
+                aliases.forEach(alias => {
                     const li = document.createElement('li');
                     li.textContent = alias;
                     aliasesList.appendChild(li);
@@ -160,7 +194,7 @@ async function showPlayerDetails(playfabId, playerName, playerId) {
                 aliasesContainer.classList.add('hidden');
             }
 
-            // Add "Assign ID" button if admin and not already saved
+            // Add \"Assign ID\" button if admin and not already saved
             if (window.isAdmin && playerId && playfabId) {
                 const player = window.findPlayerById(playerId);
                 if (player && !player.playfab_id) {
