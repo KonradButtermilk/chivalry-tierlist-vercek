@@ -8,7 +8,8 @@
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@400;700&display=swap"
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@400;700&display=swap"
         rel="stylesheet">
 </head>
 
@@ -17,292 +18,272 @@
         <header>
             <h1>Chivalry 2 Tier List</h1>
             <div class="auth-controls">
-                <!DOCTYPE html>
-                <html lang="pl">
+                <button id="history-btn" class="secondary-btn"
+                    onclick="window.location.href='history.html'">Historia</button>
+                <button id="login-btn" class="secondary-btn">Log In</button>
+                <button id="logout-btn" class="secondary-btn hidden">Log Out</button>
+            </div>
 
-                <head>
-                    <meta charset="UTF-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>Chivalry 2 Tier List</title>
-                    <link rel="stylesheet" href="style.css">
-                    <link rel="preconnect" href="https://fonts.googleapis.com">
-                    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-                    <link
-                        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@400;700&display=swap"
-                        rel="stylesheet">
-                </head>
+            <!-- Admin Controls -->
+            <div class="controls hidden" id="admin-controls">
+                <div class="add-player-group">
+                    <input type="text" id="new-player-name" placeholder="Nazwa gracza...">
+                    <button id="add-player-btn">Dodaj Gracza</button>
+                    <button id="refresh-nicknames-btn" class="secondary-btn"
+                        style="margin-left: 10px;">🔄 Odśwież Nicki</button>
+                </div>
+            </div>
+        </header>
 
-                <body>
-                    <div class="app-container">
-                        <header>
-                            <h1>Chivalry 2 Tier List</h1>
-                            <div class="auth-controls">
-                                <button id="history-btn" class="secondary-btn"
-                                    onclick="window.location.href='history.html'">Historia</button>
-                                <button id="login-btn" class="secondary-btn">Log In</button>
-                                <button id="logout-btn" class="secondary-btn hidden">Log Out</button>
-                            </div>
+        <!-- Statistics Panel (Hidden) -->
+        <div class="utility-panel" style="display: none;">
+            <div class="statistics-panel">
+                <div class="tier-stats" id="tier-stats">
+                    <!-- Tier stats will be inserted here -->
+                </div>
+            </div>
+        </div>
 
-                            <!-- Admin Controls -->
-                            <div class="controls hidden" id="admin-controls">
-                                <div class="add-player-group">
-                                    <input type="text" id="new-player-name" placeholder="Nazwa gracza...">
-                                    <button id="add-player-btn">Dodaj Gracza</button>
-                                    <button id="refresh-nicknames-btn" class="secondary-btn"
-                                        style="margin-left: 10px;">🔄 Odśwież Nicki</button>
-                                </div>
-                            </div>
-                        </header>
+        <main class="tier-board">
+            <div class="tier-column" data-tier="0">
+                <div class="tier-header tier-0">
+                    <span class="tier-title">GOAT</span>
+                    <span class="tier-count" id="count-0">(0)</span>
+                </div>
+                <div class="tier-content" id="tier-0-list">
+                    <!-- Players will go here -->
+                </div>
+            </div>
+            <div class="tier-column" data-tier="1">
+                <div class="tier-header tier-1">
+                    <span class="tier-title">Tier 1</span>
+                    <span class="tier-count" id="count-1">(0)</span>
+                </div>
+                <div class="tier-content" id="tier-1-list"></div>
+            </div>
+            <div class="tier-column" data-tier="2">
+                <div class="tier-header tier-2">
+                    <span class="tier-title">Tier 2</span>
+                    <span class="tier-count" id="count-2">(0)</span>
+                </div>
+                <div class="tier-content" id="tier-2-list"></div>
+            </div>
+            <div class="tier-column" data-tier="3">
+                <div class="tier-header tier-3">
+                    <span class="tier-title">Tier 3</span>
+                    <span class="tier-count" id="count-3">(0)</span>
+                </div>
+                <div class="tier-content" id="tier-3-list"></div>
+            </div>
+            <div class="tier-column" data-tier="4">
+                <div class="tier-header tier-4">
+                    <span class="tier-title">Tier 4</span>
+                    <span class="tier-count" id="count-4">(0)</span>
+                </div>
+                <div class="tier-content" id="tier-4-list"></div>
+            </div>
+            <div class="tier-column" data-tier="5">
+                <div class="tier-header tier-5">
+                    <span class="tier-title">Tier 5</span>
+                    <span class="tier-count" id="count-5">(0)</span>
+                </div>
+                <div class="tier-content" id="tier-5-list"></div>
+            </div>
+            <div class="tier-column" data-tier="6">
+                <div class="tier-header tier-6">
+                    <span class="tier-title">Tier 6</span>
+                    <span class="tier-count" id="count-6">(0)</span>
+                </div>
+                <div class="tier-content" id="tier-6-list"></div>
+            </div>
+            <div id="trash-zone" class="trash-zone hidden">
+                <span>🗑️ Upuść tutaj, aby usunąć</span>
+            </div>
+        </main>
+    </div>
 
-                        <!-- Statistics Panel (Hidden) -->
-                        <div class="utility-panel" style="display: none;">
-                            <div class="statistics-panel">
-                                <div class="tier-stats" id="tier-stats">
-                                    <!-- Tier stats will be inserted here -->
-                                </div>
+    <!-- Context Menu -->
+    <div id="context-menu" class="context-menu hidden">
+        <div class="menu-item" id="ctx-stats">👤 Profil Gracza</div>
+        <div class="menu-item" id="ctx-stats-auto">🌐 Wyszukaj Online</div>
+        <div class="menu-item" id="ctx-edit">✏️ Edytuj</div>
+        <div class="menu-item" id="ctx-delete">🗑️ Usuń</div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="edit-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Edytuj Gracza</h2>
+            <input type="text" id="edit-name" placeholder="Nazwa gracza">
+            <textarea id="edit-desc" placeholder="Opis (opcjonalnie)" rows="4"></textarea>
+            <div class="modal-actions">
+                <button id="save-edit">Zapisz</button>
+                <button id="cancel-edit" class="secondary-btn">Anuluj</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Admin Login</h2>
+            <input type="password" id="admin-password" placeholder="Hasło administratora">
+            <div class="modal-actions">
+                <button id="submit-login">Zaloguj</button>
+                <button id="cancel-login" class="secondary-btn">Anuluj</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Player Selection Modal (for multiple search results) -->
+    <div id="player-selection-modal" class="modal hidden">
+        <div class="modal-content selection-modal-content">
+            <h2>Wybierz Gracza</h2>
+            <p class="selection-subtitle">Znaleziono kilku graczy o podanym nicku. Wybierz właściwego:
+            </p>
+            <div id="player-selection-list" class="player-selection-list">
+                <!-- Dynamically populated -->
+            </div>
+            <button id="cancel-selection" class="secondary-btn">Anuluj</button>
+        </div>
+    </div>
+    <!-- Player Profile Modal -->
+    <div id="player-profile-modal" class="profile-modal hidden">
+        <div class="profile-overlay"></div>
+        <div class="profile-container">
+            <!-- Profile Header -->
+            <div class="profile-header">
+                <div class="profile-title-section">
+                    <h1 id="profile-player-name" class="profile-name">Player Name</h1>
+                    <div class="profile-badges">
+                        <span id="profile-tier-badge" class="profile-tier-badge"></span>
+                        <span id="profile-cache-badge" class="profile-cache-badge"></span>
+                    </div>
+                </div>
+                <button id="close-profile-btn" class="profile-close">&times;</button>
+            </div>
+
+            <!-- Loading State -->
+            <div id="profile-loading" class="profile-loading">
+                <div class="spinner-large"></div>
+                <p>Ładowanie profilu gracza...</p>
+            </div>
+
+            <!-- Profile Content -->
+            <div id="profile-content" class="profile-body hidden">
+                <!-- Core Stats -->
+                <section class="profile-section">
+                    <h2 class="section-title">📊 Statystyki Podstawowe</h2>
+                    <div class="stats-grid-main">
+                        <div class="stat-card-large">
+                            <div class="stat-icon">🏆</div>
+                            <div class="stat-details">
+                                <span class="stat-label">Global Rank</span>
+                                <span class="stat-value-xl" id="profile-rank">-</span>
                             </div>
                         </div>
-
-                        <main class="tier-board">
-                            <div class="tier-column" data-tier="0">
-                                <div class="tier-header tier-0">
-                                    <span class="tier-title">GOAT</span>
-                                    <span class="tier-count" id="count-0">(0)</span>
-                                </div>
-                                <div class="tier-content" id="tier-0-list">
-                                    <!-- Players will go here -->
-                                </div>
-                            </div>
-                            <div class="tier-column" data-tier="1">
-                                <div class="tier-header tier-1">
-                                    <span class="tier-title">Tier 1</span>
-                                    <span class="tier-count" id="count-1">(0)</span>
-                                </div>
-                                <div class="tier-content" id="tier-1-list"></div>
-                            </div>
-                            <div class="tier-column" data-tier="2">
-                                <div class="tier-header tier-2">
-                                    <span class="tier-title">Tier 2</span>
-                                    <span class="tier-count" id="count-2">(0)</span>
-                                </div>
-                                <div class="tier-content" id="tier-2-list"></div>
-                            </div>
-                            <div class="tier-column" data-tier="3">
-                                <div class="tier-header tier-3">
-                                    <span class="tier-title">Tier 3</span>
-                                    <span class="tier-count" id="count-3">(0)</span>
-                                </div>
-                                <div class="tier-content" id="tier-3-list"></div>
-                            </div>
-                            <div class="tier-column" data-tier="4">
-                                <div class="tier-header tier-4">
-                                    <span class="tier-title">Tier 4</span>
-                                    <span class="tier-count" id="count-4">(0)</span>
-                                </div>
-                                <div class="tier-content" id="tier-4-list"></div>
-                            </div>
-                            <div class="tier-column" data-tier="5">
-                                <div class="tier-header tier-5">
-                                    <span class="tier-title">Tier 5</span>
-                                    <span class="tier-count" id="count-5">(0)</span>
-                                </div>
-                                <div class="tier-content" id="tier-5-list"></div>
-                            </div>
-                            <div class="tier-column" data-tier="6">
-                                <div class="tier-header tier-6">
-                                    <span class="tier-title">Tier 6</span>
-                                    <span class="tier-count" id="count-6">(0)</span>
-                                </div>
-                                <div class="tier-content" id="tier-6-list"></div>
-                            </div>
-                            <div id="trash-zone" class="trash-zone hidden">
-                                <span>🗑️ Upuść tutaj, aby usunąć</span>
-                            </div>
-                        </main>
-                    </div>
-
-                    <!-- Context Menu -->
-                    <div id="context-menu" class="context-menu hidden">
-                        <div class="menu-item" id="ctx-stats">👤 Profil Gracza</div>
-                        <div class="menu-item" id="ctx-stats-auto">🌐 Wyszukaj Online</div>
-                        <div class="menu-item" id="ctx-edit">✏️ Edytuj</div>
-                        <div class="menu-item" id="ctx-delete">🗑️ Usuń</div>
-                    </div>
-
-                    <!-- Edit Modal -->
-                    <div id="edit-modal" class="modal hidden">
-                        <div class="modal-content">
-                            <h2>Edytuj Gracza</h2>
-                            <input type="text" id="edit-name" placeholder="Nazwa gracza">
-                            <textarea id="edit-desc" placeholder="Opis (opcjonalnie)" rows="4"></textarea>
-                            <div class="modal-actions">
-                                <button id="save-edit">Zapisz</button>
-                                <button id="cancel-edit" class="secondary-btn">Anuluj</button>
+                        <div class="stat-card-large">
+                            <div class="stat-icon">⭐</div>
+                            <div class="stat-details">
+                                <span class="stat-label">Level</span>
+                                <span class="stat-value-xl" id="profile-level">-</span>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Login Modal -->
-                    <div id="login-modal" class="modal hidden">
-                        <div class="modal-content">
-                            <h2>Admin Login</h2>
-                            <input type="password" id="admin-password" placeholder="Hasło administratora">
-                            <div class="modal-actions">
-                                <button id="submit-login">Zaloguj</button>
-                                <button id="cancel-login" class="secondary-btn">Anuluj</button>
+                        <div class="stat-card-large">
+                            <div class="stat-icon">⏱️</div>
+                            <div class="stat-details">
+                                <span class="stat-label">Czas Gry</span>
+                                <span class="stat-value-xl" id="profile-hours">-</span>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Player Selection Modal (for multiple search results) -->
-                    <div id="player-selection-modal" class="modal hidden">
-                        <div class="modal-content selection-modal-content">
-                            <h2>Wybierz Gracza</h2>
-                            <p class="selection-subtitle">Znaleziono kilku graczy o podanym nicku. Wybierz właściwego:
-                            </p>
-                            <div id="player-selection-list" class="player-selection-list">
-                                <!-- Dynamically populated -->
-                            </div>
-                            <button id="cancel-selection" class="secondary-btn">Anuluj</button>
-                        </div>
-                    </div>
-                    <!-- Player Profile Modal -->
-                    <div id="player-profile-modal" class="profile-modal hidden">
-                        <div class="profile-overlay"></div>
-                        <div class="profile-container">
-                            <!-- Profile Header -->
-                            <div class="profile-header">
-                                <div class="profile-title-section">
-                                    <h1 id="profile-player-name" class="profile-name">Player Name</h1>
-                                    <div class="profile-badges">
-                                        <span id="profile-tier-badge" class="profile-tier-badge"></span>
-                                        <span id="profile-cache-badge" class="profile-cache-badge"></span>
-                                    </div>
-                                </div>
-                                <button id="close-profile-btn" class="profile-close">&times;</button>
-                            </div>
-
-                            <!-- Loading State -->
-                            <div id="profile-loading" class="profile-loading">
-                                <div class="spinner-large"></div>
-                                <p>Ładowanie profilu gracza...</p>
-                            </div>
-
-                            <!-- Profile Content -->
-                            <div id="profile-content" class="profile-body hidden">
-                                <!-- Core Stats -->
-                                <section class="profile-section">
-                                    <h2 class="section-title">📊 Statystyki Podstawowe</h2>
-                                    <div class="stats-grid-main">
-                                        <div class="stat-card-large">
-                                            <div class="stat-icon">🏆</div>
-                                            <div class="stat-details">
-                                                <span class="stat-label">Global Rank</span>
-                                                <span class="stat-value-xl" id="profile-rank">-</span>
-                                            </div>
-                                        </div>
-                                        <div class="stat-card-large">
-                                            <div class="stat-icon">⭐</div>
-                                            <div class="stat-details">
-                                                <span class="stat-label">Level</span>
-                                                <span class="stat-value-xl" id="profile-level">-</span>
-                                            </div>
-                                        </div>
-                                        <div class="stat-card-large">
-                                            <div class="stat-icon">⏱️</div>
-                                            <div class="stat-details">
-                                                <span class="stat-label">Czas Gry</span>
-                                                <span class="stat-value-xl" id="profile-hours">-</span>
-                                            </div>
-                                        </div>
-                                        <div class="stat-card-large">
-                                            <div class="stat-icon">⚔️</div>
-                                            <div class="stat-details">
-                                                <span class="stat-label">Ulubiona Klasa</span>
-                                                <span class="stat-value-xl" id="profile-class">-</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </section>
-
-                                <!-- Top Weapons -->
-                                <section class="profile-section" id="profile-weapons-section">
-                                    <h2 class="section-title">⚔️ Najczęściej Używane Bronie</h2>
-                                    <div id="profile-top-weapons" class="top-weapons-list">
-                                        <!-- Dynamically populated -->
-                                    </div>
-                                </section>
-
-                                <!-- Class Experience -->
-                                <section class="profile-section" id="profile-classes-section">
-                                    <h2 class="section-title">🛡️ Doświadczenie Klas</h2>
-                                    <div id="profile-class-exp" class="class-exp-bars">
-                                        <!-- Dynamically populated -->
-                                    </div>
-                                </section>
-
-                                <!-- Aliases Section -->
-                                <section class="profile-section hidden" id="profile-aliases-container">
-                                    <h2 class="section-title">📜 Poprzednie Nicki <span id="nickname-count"></span></h2>
-                                    <div id="profile-aliases-list" class="nickname-chips-grid"></div>
-                                </section>
-
-                                <!-- Additional Info -->
-                                <section class="profile-section" id="profile-additional-section">
-                                    <h2 class="section-title">📈 Dodatkowe Informacje</h2>
-                                    <div class="info-grid">
-                                        <div class="info-item">
-                                            <span class="info-icon">🔎</span>
-                                            <div class="info-content">
-                                                <div class="info-label">Liczba wyszukań</div>
-                                                <div class="info-value" id="profile-search-count">-</div>
-                                            </div>
-                                        </div>
-                                        <div class="info-item">
-                                            <span class="info-icon">📅</span>
-                                            <div class="info-content">
-                                                <div class="info-label">Ostatnio widziany</div>
-                                                <div class="info-value" id="profile-last-seen">-</div>
-                                            </div>
-                                        </div>
-                                        <div class="info-item">
-                                            <span class="info-icon">🎖️</span>
-                                            <div class="info-content">
-                                                <div class="info-label">Supporter</div>
-                                                <div class="info-value" id="profile-supporter">-</div>
-                                            </div>
-                                        </div>
-                                        <div class="info-item">
-                                            <span class="info-icon">🔢</span>
-                                            <div class="info-content">
-                                                <div class="info-label">PlayFab ID</div>
-                                                <div class="info-value info-value-small" id="profile-playfab-id">-</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </section>
-
-                                <!-- Action Buttons -->
-                                <div class="profile-actions">
-                                    <a id="view-chivstats" href="#" target="_blank" class="btn-secondary">🔗 Zobacz na
-                                        ChivalryStats</a>
-                                    <button id="assign-id-btn" class="btn-gold hidden">📌 Przypisz ID do gracza</button>
-                                    <button id="unassign-id-btn" class="btn-danger hidden">❌ Usuń Przypisanie</button>
-                                </div>
-                            </div>
-
-                            <!-- Error State -->
-                            <div id="profile-error" class="profile-error hidden">
-                                <div class="error-icon">⚠️</div>
-                                <p id="profile-error-msg">Wystąpił błąd podczas ładowania danych.</p>
-                                <button id="retry-profile" class="btn-secondary">Spróbuj ponownie</button>
+                        <div class="stat-card-large">
+                            <div class="stat-icon">⚔️</div>
+                            <div class="stat-details">
+                                <span class="stat-label">Ulubiona Klasa</span>
+                                <span class="stat-value-xl" id="profile-class">-</span>
                             </div>
                         </div>
                     </div>
+                </section>
 
-                    <script src="script_fixed.js"></script>
-                    <script src="enhancements.js"></script>
-                    <script src="stats-list.js"></script>
-                </body>
+                <!-- Top Weapons -->
+                <section class="profile-section" id="profile-weapons-section">
+                    <h2 class="section-title">⚔️ Najczęściej Używane Bronie</h2>
+                    <div id="profile-top-weapons" class="top-weapons-list">
+                        <!-- Dynamically populated -->
+                    </div>
+                </section>
 
-                </html>
+                <!-- Class Experience -->
+                <section class="profile-section" id="profile-classes-section">
+                    <h2 class="section-title">🛡️ Doświadczenie Klas</h2>
+                    <div id="profile-class-exp" class="class-exp-bars">
+                        <!-- Dynamically populated -->
+                    </div>
+                </section>
+
+                <!-- Aliases Section -->
+                <section class="profile-section hidden" id="profile-aliases-container">
+                    <h2 class="section-title">📜 Poprzednie Nicki <span id="nickname-count"></span></h2>
+                    <div id="profile-aliases-list" class="nickname-chips-grid"></div>
+                </section>
+
+                <!-- Additional Info -->
+                <section class="profile-section" id="profile-additional-section">
+                    <h2 class="section-title">📈 Dodatkowe Informacje</h2>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-icon">🔎</span>
+                            <div class="info-content">
+                                <div class="info-label">Liczba wyszukań</div>
+                                <div class="info-value" id="profile-search-count">-</div>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-icon">📅</span>
+                            <div class="info-content">
+                                <div class="info-label">Ostatnio widziany</div>
+                                <div class="info-value" id="profile-last-seen">-</div>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-icon">🎖️</span>
+                            <div class="info-content">
+                                <div class="info-label">Supporter</div>
+                                <div class="info-value" id="profile-supporter">-</div>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-icon">🔢</span>
+                            <div class="info-content">
+                                <div class="info-label">PlayFab ID</div>
+                                <div class="info-value info-value-small" id="profile-playfab-id">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Action Buttons -->
+                <div class="profile-actions">
+                    <a id="view-chivstats" href="#" target="_blank" class="btn-secondary">🔗 Zobacz na
+                        ChivalryStats</a>
+                    <button id="assign-id-btn" class="btn-gold hidden">📌 Przypisz ID do gracza</button>
+                    <button id="unassign-id-btn" class="btn-danger hidden">❌ Usuń Przypisanie</button>
+                </div>
+            </div>
+
+            <!-- Error State -->
+            <div id="profile-error" class="profile-error hidden">
+                <div class="error-icon">⚠️</div>
+                <p id="profile-error-msg">Wystąpił błąd podczas ładowania danych.</p>
+                <button id="retry-profile" class="btn-secondary">Spróbuj ponownie</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script_fixed.js"></script>
+    <script src="enhancements.js"></script>
+    <script src="stats-list.js"></script>
+</body>
+
+</html>
