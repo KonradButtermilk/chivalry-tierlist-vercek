@@ -160,16 +160,16 @@ module.exports = async (req, res) => {
                 return res.status(200).json({ message: 'Alias updated' });
             }
 
-            const { name, tier, description } = body;
+            const { name, tier, description, playfab_id, source } = body;
             if (!name || tier === undefined || tier === null) throw new Error('Missing name or tier');
 
             try {
                 const result = await client.query(
-                    'INSERT INTO players (name, tier, description) VALUES ($1, $2, $3) RETURNING *',
-                    [name, tier, description || '']
+                    'INSERT INTO players (name, tier, description, playfab_id, source) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+                    [name, tier, description || '', playfab_id || null, source || 'manual']
                 );
 
-                await logHistory('ADD', name, `Added to Tier ${tier}`);
+                await logHistory('ADD', name, `Added to Tier ${tier} (source: ${source || 'manual'})`);
 
                 await client.end();
                 return res.status(201).json(result.rows[0]);

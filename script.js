@@ -256,7 +256,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function addPlayerFromAPI(apiPlayer) {
-        const displayName = apiPlayer.displayName || apiPlayer.name;
+        // Fix: search results use 'username', not 'displayName'
+        const displayName = apiPlayer.username || apiPlayer.displayName || apiPlayer.name;
         const playfabId = apiPlayer.playfabId || apiPlayer.id;
 
         // Fetch detailed stats to get current nickname
@@ -300,7 +301,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const item = document.createElement('div');
             item.className = 'selection-item';
 
-            const displayName = player.displayName || player.name;
+            // Fix: search results use 'username', not 'displayName'
+            const displayName = player.username || player.displayName || player.name || 'Unknown';
             const level = player.globalXp ? Math.floor(player.globalXp / 1000) : '?';
 
             item.innerHTML = `
