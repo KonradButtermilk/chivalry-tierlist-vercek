@@ -734,6 +734,22 @@ document.addEventListener('DOMContentLoaded', () => {
             if (cacheBadge) {
                 cacheBadge.textContent = '✨ Świeże dane';
                 cacheBadge.style.borderColor = '#4caf50';
+                cacheBadge.style.color = '#4caf50';
+            }
+
+            // Set ChivalryStats link
+            const chivStatsLink = document.getElementById('view-chivstats');
+            if (chivStatsLink) {
+                chivStatsLink.href = `https://chivalry2stats.com/player/${stats.playfabId || ''}`;
+            }
+
+            // Handle Aliases  
+            const aliasesList = document.getElementById('profile-aliases-list');
+            const aliasesContainer = document.getElementById('profile-aliases-container');
+            if (aliasesList && aliasesContainer) {
+                aliasesList.innerHTML = '';
+                const aliases = stats.aliases || stats.otherNames || (stats.history ? stats.history.map(h => h.name) : []);
+
                 if (aliases && aliases.length > 0) {
                     aliasesContainer.classList.remove('hidden');
                     aliases.forEach(alias => {
