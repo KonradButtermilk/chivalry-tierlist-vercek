@@ -80,6 +80,20 @@ async function showPlayerDetails(playfabId, playerName, playerId) {
     const content = document.getElementById('profile-content');
     const error = document.getElementById('profile-error');
 
+    // Clear previous data to prevent persistence
+    const clearElements = [
+        'profile-rank', 'profile-level', 'profile-hours', 'profile-class',
+        'profile-top-weapons', 'profile-class-exp', 'profile-aliases-list',
+        'profile-search-count', 'profile-last-seen', 'profile-supporter', 'profile-playfab-id'
+    ];
+    clearElements.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            if (el.tagName === 'DIV') el.innerHTML = '';
+            else el.textContent = '-';
+        }
+    });
+
     if (modal) modal.classList.remove('hidden');
     if (loading) loading.classList.remove('hidden');
     if (content) content.classList.add('hidden');
@@ -175,7 +189,7 @@ async function showPlayerDetails(playfabId, playerName, playerId) {
             if (maxClass[1] > 0) favoriteClass = maxClass[0];
 
             if (classEl) classEl.textContent = favoriteClass;
-            if (chivstatsEl) chivstatsEl.href = `https://chivalry2stats.com/player/${playfabId}`;
+            if (chivstatsEl) chivstatsEl.href = `https://chivalry2stats.com/player?id=${playfabId}`;
 
             // Display aliases (from search data or stats)
             const aliasesContainer = document.getElementById('profile-aliases-container');
@@ -209,7 +223,7 @@ async function showPlayerDetails(playfabId, playerName, playerId) {
         showToast('❌ Błąd ładowania - otwieram ChivalryStats', 'error');
         if (loading) loading.classList.add('hidden');
         // Fallback: open ChivalryStats
-        window.open(`https://chivalry2stats.com/player/${playfabId}`, '_blank');
+        window.open(`https://chivalry2stats.com/player?id=${playfabId}`, '_blank');
         if (modal) modal.classList.add('hidden');
     }
 }

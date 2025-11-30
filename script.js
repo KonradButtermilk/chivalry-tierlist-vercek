@@ -601,6 +601,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const content = document.getElementById('profile-content');
         const error = document.getElementById('profile-error');
 
+        // Clear previous data to prevent persistence
+        const clearElements = [
+            'profile-rank', 'profile-level', 'profile-hours', 'profile-class',
+            'profile-top-weapons', 'profile-class-exp', 'profile-aliases-list',
+            'profile-search-count', 'profile-last-seen', 'profile-supporter', 'profile-playfab-id'
+        ];
+        clearElements.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                if (el.tagName === 'DIV') el.innerHTML = '';
+                else el.textContent = '-';
+            }
+        });
+
         // Show modal and loading state
         if (modal) modal.classList.remove('hidden');
         if (loading) loading.classList.remove('hidden');
@@ -871,7 +885,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Set ChivalryStats link
             const chivStatsLink = document.getElementById('view-chivstats');
             if (chivStatsLink) {
-                chivStatsLink.href = `https://chivalry2stats.com/player/${stats.playfabId || ''}`;
+                chivStatsLink.href = `https://chivalry2stats.com/player?id=${stats.playfabId || ''}`;
             }
 
             // Handle Assign/Unassign ID Buttons
