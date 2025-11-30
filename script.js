@@ -106,6 +106,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') attemptLogin();
     });
 
+    // Player selection modal
+    const cancelSelectionBtn = document.getElementById('cancel-selection');
+    if (cancelSelectionBtn) {
+        cancelSelectionBtn.addEventListener('click', () => {
+            const selectionModal = document.getElementById('player-selection-modal');
+            if (selectionModal) selectionModal.classList.add('hidden');
+        });
+    }
+
     function attemptLogin() {
         const password = adminPasswordInput.value;
         if (password) {
@@ -209,14 +218,109 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function addPlayer() {
         const name = nameInput.value.trim();
-        if (name && isAdmin) {
-            const newPlayer = await apiCall('POST', { name, tier: 1 });
+        if (!name || !isAdmin) return;
+
+        showToast('🔍 Wyszukuję gracza...', 'info');
+
+        try {
+            // Search ChivalryStats API
+            const response = await fetch(`/api/playfab-stats?playerName=${encodeURIComponent(name)}`);
+            const data = await response.json();
+
+            if (!data.success || !data.data || !data.data.players || data.data.players.length === 0) {
+                showToast('❌ Nie znaleziono gracza', 'error');
+                return;
+            }
+
+            const players = data.data.players;
+
+            if (players.length === 1) {
+                // Single result - add immediately
+                await addPlayerFromAPI(players[0]);
+            } else {
+                // Multiple results - show selection modal
+                showPlayerSelectionModal(players);
+            }
+
+        } catch (error) {
+            console.error('[Add Player] Error:', error);
+            showToast('❌ Błąd wyszukiwania - dodaję ręcznie', 'warning');
+            // Fallback to manual add
+            const newPlayer = await apiCall('POST', { name, tier: 1, source: 'manual' });
             if (newPlayer) {
                 tierData[1].push(newPlayer);
                 renderTier(1);
                 nameInput.value = '';
             }
         }
+    }
+
+    async function addPlayerFromAPI(apiPlayer) {
+        const displayName = apiPlayer.displayName || apiPlayer.name;
+        const playfabId = apiPlayer.playfabId || apiPlayer.id;
+
+        // Fetch detailed stats to get current nickname
+        try {
+            const detailResponse = await fetch(`/api/playfab-stats?playfabId=${playfabId}`);
+            const detailData = await detailResponse.json();
+
+            const currentNickname = detailData.success && detailData.data
+                ? (detailData.data.displayName || displayName)
+                : displayName;
+
+            // Add player with API data
+            const newPlayer = await apiCall('POST', {
+                name: currentNickname,
+                tier: 1,
+                playfab_id: playfabId,
+                source: 'api'  // Mark as from API
+            });
+
+            if (newPlayer) {
+                tierData[1].push(newPlayer);
+                renderTier(1);
+                nameInput.value = '';
+                showToast(`✅ Dodano: ${currentNickname}`, 'success');
+            }
+        } catch (error) {
+            console.error('[Add From API] Error:', error);
+            showToast('❌ Błąd dodawania gracza', 'error');
+        }
+    }
+
+    function showPlayerSelectionModal(players) {
+        const modal = document.getElementById('player-selection-modal');
+        const list = document.getElementById('player-selection-list');
+
+        if (!modal || !list) return;
+
+        list.innerHTML = '';
+
+        players.forEach(player => {
+            const item = document.createElement('div');
+            item.className = 'selection-item';
+
+            const displayName = player.displayName || player.name;
+            const level = player.globalXp ? Math.floor(player.globalXp / 1000) : '?';
+
+            item.innerHTML = `
+                <div class="selection-item-info">
+                    <div class="selection-item-name">${displayName}</div>
+                    <div class="selection-item-details">Level ${level} • ID: ${(player.playfabId || player.id).substring(0, 8)}...</div>
+                </div>
+                <button class="selection-item-btn">Wybierz</button>
+            `;
+
+            const btn = item.querySelector('.selection-item-btn');
+            btn.addEventListener('click', async () => {
+                modal.classList.add('hidden');
+                await addPlayerFromAPI(player);
+            });
+
+            list.appendChild(item);
+        });
+
+        modal.classList.remove('hidden');
     }
 
     function renderAllTiers() {
@@ -250,6 +354,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function createPlayerCard(player, index) {
         const div = document.createElement('div');
         div.className = `player-card tier-${player.tier}`;
+
+        // Visual distinction for API-sourced players (green tint)
+        if (player.source === 'api' || player.playfab_id) {
+            div.classList.add('from-api');
+        }
 
         // Restore selection state if re-rendering
         if (selectedPlayerIds.has(String(player.id))) {
