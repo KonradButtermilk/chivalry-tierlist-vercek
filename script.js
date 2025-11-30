@@ -685,6 +685,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+
             // Calculate derived stats from raw data
             const playtime = stats.totalPlaytime || stats.playtimeex || stats.playtime || 0;
             const playtimeHours = playtime > 0 ? Math.round(playtime / 3600) : 0;
@@ -692,29 +693,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const globalXp = stats.globalXp || 0;
             const level = globalXp > 0 ? Math.floor(globalXp / 1000) : '-';
 
-            // Render Stats (with real data from leaderboard API)
+            // Set Avatar (first letter of name)
+            const avatarEl = document.getElementById('profile-avatar');
+            if (avatarEl) {
+                avatarEl.textContent = playerName.charAt(0).toUpperCase();
+            }
+
+            // Render Quick Stats
             const rankEl = document.getElementById('profile-rank');
             const levelEl = document.getElementById('profile-level');
-            const kdEl = document.getElementById('profile-kd');
-            const winrateEl = document.getElementById('profile-winrate');
             const hoursEl = document.getElementById('profile-hours');
-            const matchesEl = document.getElementById('profile-matches');
-            const killsEl = document.getElementById('profile-kills');
-            const deathsEl = document.getElementById('profile-deaths');
-            const winsEl = document.getElementById('profile-wins');
-            const lossesEl = document.getElementById('profile-losses');
             const classEl = document.getElementById('profile-class');
 
-            if (rankEl) rankEl.textContent = globalRank || '-';
+            if (rankEl) rankEl.textContent = globalRank !== '-' ? `#${globalRank.toLocaleString()}` : '-';
             if (levelEl) levelEl.textContent = level || '-';
-            if (kdEl) kdEl.textContent = '-'; // K/D not directly available in leaderboard stats
-            if (winrateEl) winrateEl.textContent = '-'; // Win rate not available
-            if (hoursEl) hoursEl.textContent = playtimeHours > 0 ? `${playtimeHours}h` : '-';
-            if (matchesEl) matchesEl.textContent = '-'; // Matches not in leaderboard data
-            if (killsEl) killsEl.textContent = '-';
-            if (deathsEl) deathsEl.textContent = '-';
-            if (winsEl) winsEl.textContent = '-';
-            if (lossesEl) lossesEl.textContent = '-';
+            if (hoursEl) hoursEl.textContent = playtimeHours > 0 ? `${playtimeHours.toLocaleString()}h` : '-';
 
             // Determine favorite class from experience values
             let favoriteClass = 'Brak danych';
@@ -726,8 +719,146 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             const maxClass = Object.entries(classExp).reduce((a, b) => a[1] > b[1] ? a : b);
             if (maxClass[1] > 0) favoriteClass = maxClass[0];
-
             if (classEl) classEl.textContent = favoriteClass;
+
+            // Render Top 4 Weapons
+            const topWeaponsContainer = document.getElementById('profile-top-weapons');
+            if (topWeaponsContainer) {
+                topWeaponsContainer.innerHTML = '';
+
+                // Collect all weapon experience
+                const weapons = [];
+                Object.keys(stats).forEach(key => {
+                    if (key.startsWith('experienceWeapon') && stats[key] > 0) {
+                        const weaponName = key.replace('experienceWeapon', '').replace(/([A-Z])/g, ' $1').trim();
+                        weapons.push({ name: weaponName, xp: stats[key] });
+                    }
+                });
+
+                // Sort and get top 4
+                weapons.sort((a, b) => b.xp - a.xp);
+                const top4 = weapons.slice(0, 4);
+
+                top4.forEach((weapon, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'weapon-item';
+                    item.innerHTML = `
+                        <div class="weapon-info">
+                            <div class="weapon-rank">${index + 1}</div>
+                            <div class="weapon-name">${weapon.name}</div>
+                        </div>
+                        <div class="weapon-xp">${(weapon.xp / 1000).toFixed(1)}k XP</div>
+                    `;
+                    topWeaponsContainer.appendChild(item);
+                });
+
+                if (top4.length === 0) {
+                    topWeaponsContainer.innerHTML = '<p style="color: rgba(255,255,255,0.5);">Brak danych o broniach</p>';
+                }
+            }
+
+            // Render Class Experience Bars
+            const classExpContainer = document.getElementById('profile-class-exp');
+            if (classExpContainer) {
+                classExpContainer.innerHTML = '';
+                const maxXp = Math.max(...Object.values(classExp));
+
+                Object.entries(classExp).forEach(([className, xp]) => {
+                    const percentage = maxXp > 0 ? (xp / maxXp) * 100 : 0;
+                    const item = document.createElement('div');
+                    item.className = 'class-exp-item';
+                    item.innerHTML = `
+                        <div class="class-exp-header">
+                            <span class="class-name">${className}</span>
+                            <span class="class-xp-value">${(xp / 1000).toFixed(1)}k XP</span>
+                        </div>
+                        <div class="class-exp-bar">
+                            <div class="class-exp-fill" style="width: ${percentage}%"></div>
+                        </div>
+                    `;
+                    classExpContainer.appendChild(item);
+                });
+            }
+
+            // Render Activity Chart (simplified - based on lookup count)
+            const activityChart = document.getElementById('profile-activity-chart');
+            if (activityChart) {
+                activityChart.innerHTML = '';
+                const lookupCount = stats.lookupCount || 0;
+
+                // Create 52 weeks of activity boxes
+                for (let i = 0; i < 52; i++) {
+                    const day = document.createElement('div');
+                    day.className = 'activity-day';
+
+                    // Simulate activity level based on lookup count
+                    const level = lookupCount > 100 ? 3 : lookupCount > 50 ? 2 : lookupCount > 10 ? 1 : 0;
+                    const randomFactor = Math.random();
+                    const activityLevel = randomFactor > 0.7 ? level : Math.max(0, level - 1);
+
+                    day.style.background = [
+                        'rgba(255, 255, 255, 0.1)',
+                        'rgba(212, 175, 55, 0.3)',
+                        'rgba(212, 175, 55, 0.6)',
+                        '#d4af37'
+                    ][activityLevel];
+
+                    day.title = `Aktywność: ${['Brak', 'Niska', 'Średnia', 'Wysoka'][activityLevel]}`;
+                    activityChart.appendChild(day);
+                }
+            }
+
+            // Render Nickname History with Collapsible
+            const aliasesList = document.getElementById('profile-aliases-list');
+            const aliasesContainer = document.getElementById('profile-aliases-container');
+            const nicknameCount = document.getElementById('nickname-count');
+            const nicknameToggle = document.getElementById('nickname-history-toggle');
+
+            if (aliasesList && aliasesContainer) {
+                aliasesList.innerHTML = '';
+                const aliases = stats.aliases || (stats.aliasHistory ? stats.aliasHistory.split(',').map(a => a.trim()).filter(Boolean) : []);
+
+                if (aliases && aliases.length > 0) {
+                    if (nicknameCount) nicknameCount.textContent = `(${aliases.length})`;
+
+                    aliases.forEach(alias => {
+                        const chip = document.createElement('div');
+                        chip.className = 'nickname-chip';
+                        chip.textContent = alias;
+                        aliasesList.appendChild(chip);
+                    });
+
+                    // Add toggle functionality
+                    if (nicknameToggle) {
+                        nicknameToggle.onclick = () => {
+                            aliasesContainer.classList.toggle('collapsed');
+                            nicknameToggle.classList.toggle('expanded');
+                        };
+                    }
+                } else {
+                    if (nicknameCount) nicknameCount.textContent = '(0)';
+                    aliasesList.innerHTML = '<p style="color: rgba(255,255,255,0.5);">Brak historii nicków</p>';
+                }
+            }
+
+            // Render Additional Info
+            const searchCountEl = document.getElementById('profile-search-count');
+            const lastSeenEl = document.getElementById('profile-last-seen');
+            const supporterEl = document.getElementById('profile-supporter');
+            const playfabIdEl = document.getElementById('profile-playfab-id');
+
+            if (searchCountEl) searchCountEl.textContent = stats.lookupCount || '-';
+            if (lastSeenEl) {
+                const lastLookup = stats.lastLookup;
+                if (lastLookup) {
+                    const date = new Date(lastLookup);
+                    lastSeenEl.textContent = date.toLocaleDateString('pl-PL');
+                } else {
+                    lastSeenEl.textContent = '-';
+                }
+            }
+            if (supporterEl) supporterEl.textContent = stats.supporter ? '✅ Tak' : '❌ Nie';
+            if (playfabIdEl) playfabIdEl.textContent = stats.playfabId || '-';
 
             // Set cache badge
             const cacheBadge = document.getElementById('profile-cache-badge');
@@ -743,33 +874,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 chivStatsLink.href = `https://chivalry2stats.com/player/${stats.playfabId || ''}`;
             }
 
-            // Handle Aliases  
-            const aliasesList = document.getElementById('profile-aliases-list');
-            const aliasesContainer = document.getElementById('profile-aliases-container');
-            if (aliasesList && aliasesContainer) {
-                aliasesList.innerHTML = '';
-                const aliases = stats.aliases || stats.otherNames || (stats.history ? stats.history.map(h => h.name) : []);
-
-                if (aliases && aliases.length > 0) {
-                    aliasesContainer.classList.remove('hidden');
-                    aliases.forEach(alias => {
-                        const li = document.createElement('li');
-                        li.textContent = alias;
-                        aliasesList.appendChild(li);
-                    });
-                } else {
-                    aliasesContainer.classList.add('hidden');
-                }
-            }
-
-            // Handle Assign ID Button
+            // Handle Assign/Unassign ID Buttons
             const assignBtn = document.getElementById('assign-id-btn');
-            if (assignBtn) {
+            const unassignBtn = document.getElementById('unassign-id-btn');
+
+            if (assignBtn && unassignBtn) {
                 if (isAdmin && stats.playfabId) {
-                    assignBtn.classList.remove('hidden');
-                    assignBtn.dataset.playfabId = stats.playfabId;
+                    if (player && player.playfab_id) {
+                        // Already assigned - show unassign
+                        assignBtn.classList.add('hidden');
+                        unassignBtn.classList.remove('hidden');
+                    } else {
+                        // Not assigned - show assign
+                        assignBtn.classList.remove('hidden');
+                        assignBtn.dataset.playfabId = stats.playfabId;
+                        unassignBtn.classList.add('hidden');
+                    }
                 } else {
                     assignBtn.classList.add('hidden');
+                    unassignBtn.classList.add('hidden');
                 }
             }
 
