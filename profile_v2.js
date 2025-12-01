@@ -6,7 +6,7 @@
 (function () {
     'use strict';
 
-    console.log('[PROFILE-V2] Module loaded');
+    console.log('[PROFILE-V2] Version 2.1 loaded - with Admin Lock');
 
     // Elements
     let modal, loading, error, content, closeBtn;
