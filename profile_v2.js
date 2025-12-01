@@ -148,25 +148,36 @@
                 const searchResult = data.data.players[0];
                 playfabId = searchResult.playfabId || searchResult.id;
 
-                // Fetch full stats
-                const detailResponse = await fetch(`/api/playfab-stats?playfabId=${playfabId}`);
-                const detailData = await detailResponse.json();
+                // Use search result as stats
+                stats = searchResult;
+                stats.playfabId = playfabId;
+            }
 
-                if (detailData.success && detailData.data) {
-                    stats = detailData.data;
-                    stats.playfabId = playfabId;
-                } else {
-                    throw new Error('Failed to get player details');
+            // --- HISTORY FETCH FIX ---
+            try {
+                const searchName = stats.displayName || stats.name || playerName;
+                console.log('[PROFILE-V2] Fetching history for:', searchName);
+                const historyRes = await fetch(`/api/playfab-stats?playerName=${encodeURIComponent(searchName)}`);
+                const historyData = await historyRes.json();
+
+                if (historyData.success && historyData.data && historyData.data.players) {
+                    const match = historyData.data.players.find(p =>
+                        (stats.playfabId && (p.playfabId === stats.playfabId || p.id === stats.playfabId)) ||
+                        p.name === searchName
+                    );
+
+                    if (match) {
+                        console.log('[PROFILE-V2] Found history match:', match);
+                        if (match.aliases) stats.aliases = match.aliases;
+                        if (match.aliasHistory) stats.aliasHistory = match.aliasHistory;
+                    }
                 }
+            } catch (e) {
+                console.warn('[PROFILE-V2] History fetch failed:', e);
             }
 
             console.log('[PROFILE-V2] Got stats:', stats);
 
-            // Render profile
-            renderProfile(stats, player);
-
-            // Show content
-            loading.classList.add('hidden');
             content.classList.remove('hidden');
 
         } catch (err) {
@@ -427,6 +438,18 @@
                         p[field] = value;
                     }
                 });
+            }
+            // ChivalryStats link
+            const chivStatsLink = document.getElementById('view-chivstats');
+            if (chivStatsLink) {
+                if (stats.playfabId) {
+                    chivStatsLink.href = `https://chivalry2stats.com/player?id=${stats.playfabId}`;
+                    chivStatsLink.target = '_blank';
+                    chivStatsLink.onclick = null; // Remove any previous handlers
+                } else {
+                    chivStatsLink.href = '#';
+                    chivStatsLink.onclick = (e) => { e.preventDefault(); alert('Brak PlayFab ID'); };
+                }
             }
         } catch (e) {
             alert('Błąd aktualizacji: ' + e.message);
@@ -699,7 +722,9 @@
                     },
                     body: JSON.stringify({
                         id: currentPlayerId,
-                        playfab_id: playfabId
+                        id: currentPlayerId,
+                        playfab_id: playfabId,
+                        name: playerName // Update name in DB as well
                     })
                 });
 
@@ -711,6 +736,7 @@
                         Object.values(window.tierData).flat().forEach(p => {
                             if (String(p.id) === String(currentPlayerId)) {
                                 p.playfab_id = playfabId;
+                                p.name = playerName; // Update name to match assigned ID
                             }
                         });
                     }
