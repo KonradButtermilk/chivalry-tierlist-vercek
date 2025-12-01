@@ -1642,3 +1642,138 @@ textarea:focus {
 }
 
 /* API-sourced player visual distinction REMOVED */
+/* ========================================
+   COMPACT PROFILE MODAL
+   ======================================== */
+.profile-container-compact {
+    background: #1a1a1a;
+    width: 90%;
+    max-width: 480px; /* Compact width */
+    border-radius: 12px;
+    border: 1px solid #333;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    position: relative;
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+    overflow: hidden;
+    margin: auto;
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+.profile-header-compact {
+    padding: 15px 20px;
+    background: linear-gradient(to bottom, #252525, #1a1a1a);
+    border-bottom: 1px solid #333;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.profile-name-compact {
+    margin: 0;
+    font-size: 1.4rem;
+    color: #fff;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+}
+
+.profile-close-btn {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.profile-close-btn:hover {
+    color: #fff;
+}
+
+.profile-content-compact {
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.section-compact {
+    margin-bottom: 20px;
+}
+
+.section-title-compact {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #888;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 5px;
+}
+
+.profile-badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.profile-tier-badge {
+    font-size: 0.85rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.alias-chip-compact {
+    display: inline-block;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    color: #ccc;
+    margin-right: 5px;
+    margin-bottom: 5px;
+}
+
+.btn-secondary-compact {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.btn-secondary-compact:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+.profile-loading-compact, .profile-error-compact {
+    padding: 40px;
+    text-align: center;
+    color: #888;
+}
+
+/* Ensure modal overlay works */
+.profile-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(5px);
+}
+
+.profile-modal.hidden {
+    display: none;
+}

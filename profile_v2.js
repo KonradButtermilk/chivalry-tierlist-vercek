@@ -244,55 +244,161 @@
 
         try {
             // Calculate derived stats
-            // Prioritize playtimeex (seconds) over totalPlaytime (unknown unit/garbage)
             const playtime = stats.playtimeex || stats.totalPlaytime || stats.playtime || 0;
             const playtimeHours = playtime > 0 ? Math.round(playtime / 3600) : 0;
             const globalRank = stats.globalXpPosition || stats.global_rank || '-';
             const globalXp = stats.globalXp || 0;
-            const level = globalXp > 0 ? Math.floor(globalXp / 1000) : '-';
 
-            // Quick stats
-            document.getElementById('profile-rank').textContent = globalRank !== '-' ? `#${globalRank.toLocaleString()}` : '-';
-            document.getElementById('profile-level').textContent = level || '-';
-            document.getElementById('profile-hours').textContent = playtimeHours > 0 ? `${playtimeHours.toLocaleString()}h` : '-';
+            // Level Calculation Fix:
+            // Chivalry 2 XP curve is complex, but ~20,000 XP per level is a better approximation than 1000.
+            // Max level is 1000.
+            let level = '-';
+            if (globalXp > 0) {
+                // Try to use provided level if available and reasonable, otherwise calculate
+                // If API returns level > 1000, it's likely XP/1000, so we recalculate
+                if (stats.level && stats.level <= 1000) {
+                    level = stats.level;
+                } else {
+                    // Approx formula: XP / 20000 (Very rough, but better than 6000+)
+                    level = Math.floor(globalXp / 20000);
+                    if (level > 1000) level = 1000; // Cap at 1000
+                    if (level === 0) level = 1;
+                }
+            }
 
-            // Favorite class
-            const classExp = {
-                'Knight': stats.experienceKnight || 0,
-                'Vanguard': stats.experienceVanguard || 0,
-                'Footman': stats.experienceFootman || 0,
-                'Archer': stats.experienceArcher || 0
-            };
-            const maxClass = Object.entries(classExp).reduce((a, b) => a[1] > b[1] ? a : b);
-            document.getElementById('profile-class').textContent = maxClass[1] > 0 ? maxClass[0] : '-';
+            // Header: Name + AKA
+            const nameEl = document.getElementById('profile-player-name');
+            nameEl.innerHTML = '';
+            const nameText = document.createElement('span');
+            nameText.textContent = localPlayer.name;
+            nameEl.appendChild(nameText);
 
-            // Top Weapons (show level, not XP)
+            if (localPlayer.original_name && localPlayer.original_name !== localPlayer.name) {
+                const akaSpan = document.createElement('span');
+                akaSpan.style.fontSize = '14px';
+                akaSpan.style.color = 'rgba(255,255,255,0.5)';
+                akaSpan.style.marginLeft = '10px';
+                akaSpan.style.fontWeight = 'normal';
+                akaSpan.textContent = `(aka ${localPlayer.original_name})`;
+                nameEl.appendChild(akaSpan);
+            }
+
+            // Compact Stats Row (Rank | Level | Playtime)
+            const badgesContainer = document.querySelector('.profile-badges');
+            if (badgesContainer) {
+                badgesContainer.innerHTML = '';
+
+                const createStatBadge = (label, value, icon) => {
+                    const badge = document.createElement('div');
+                    badge.className = 'profile-tier-badge'; // Reuse existing class but modify style
+                    badge.style.background = 'rgba(255,255,255,0.05)';
+                    badge.style.border = '1px solid rgba(255,255,255,0.1)';
+                    badge.style.color = '#ddd';
+                    badge.style.display = 'flex';
+                    badge.style.alignItems = 'center';
+                    badge.style.gap = '6px';
+                    badge.innerHTML = `<span style="opacity:0.7">${icon}</span> <span>${value}</span>`;
+                    return badge;
+                };
+
+                // Rank
+                if (globalRank !== '-') {
+                    badgesContainer.appendChild(createStatBadge('Rank', `#${globalRank.toLocaleString()}`, '🏆'));
+                }
+                // Level
+                badgesContainer.appendChild(createStatBadge('Level', `Lvl ${level}`, '⭐'));
+                // Playtime
+                if (playtimeHours > 0) {
+                    badgesContainer.appendChild(createStatBadge('Time', `${playtimeHours.toLocaleString()}h`, '⏱️'));
+                }
+            }
+
+            // Hide old stats grid elements that are now redundant or requested to be removed
+            const statsGrid = document.querySelector('.stats-grid-main');
+            if (statsGrid) statsGrid.style.display = 'none'; // Hide the big cards
+
+            // Top Weapons (Compact Bar Chart)
             const weaponsContainer = document.getElementById('profile-top-weapons');
             weaponsContainer.innerHTML = '';
+
+            // Remove "Top Weapons" header if it exists as a separate element
+            // (It's usually in HTML, we might need to hide the section title via CSS or JS)
+            const weaponsSectionTitle = weaponsContainer.previousElementSibling;
+            if (weaponsSectionTitle && weaponsSectionTitle.classList.contains('section-title')) {
+                weaponsSectionTitle.style.display = 'none';
+            }
 
             const weapons = [];
             Object.keys(stats).forEach(key => {
                 if (key.startsWith('experienceWeapon') && stats[key] > 0) {
                     const weaponName = key.replace('experienceWeapon', '').replace(/([A-Z])/g, ' $1').trim();
-                    weapons.push({ name: weaponName, xp: stats[key] });
+                    // Filter out ranged
+                    if (!['Bow', 'Crossbow', 'Javelin', 'Throwing Axe'].includes(weaponName)) {
+                        weapons.push({ name: weaponName, xp: stats[key] });
+                    }
                 }
             });
 
             weapons.sort((a, b) => b.xp - a.xp);
-            const topWeapons = weapons.slice(0, 6);
+            const topWeapons = weapons.slice(0, 5); // Top 5
 
-            topWeapons.forEach(weapon => {
-                const level = Math.floor(weapon.xp / 1000);
-                const card = document.createElement('div');
-                card.className = 'weapon-card-compact';
-                card.innerHTML = `
-                <span class="weapon-name-compact">${weapon.name}</span>
-                <span class="weapon-level-compact">Lvl ${level}</span>
-            `;
-                weaponsContainer.appendChild(card);
-            });
+            if (topWeapons.length > 0) {
+                const maxXP = topWeapons[0].xp;
 
-            if (topWeapons.length === 0) {
+                topWeapons.forEach(weapon => {
+                    const level = Math.floor(weapon.xp / 1000); // Weapon level is roughly XP/1000
+                    const percentage = (weapon.xp / maxXP) * 100;
+
+                    const row = document.createElement('div');
+                    row.style.display = 'flex';
+                    row.style.alignItems = 'center';
+                    row.style.marginBottom = '8px';
+                    row.style.fontSize = '13px';
+
+                    // Name
+                    const nameDiv = document.createElement('div');
+                    nameDiv.style.width = '100px';
+                    nameDiv.style.textAlign = 'right';
+                    nameDiv.style.paddingRight = '10px';
+                    nameDiv.style.color = '#ccc';
+                    nameDiv.textContent = weapon.name;
+
+                    // Bar Container
+                    const barContainer = document.createElement('div');
+                    barContainer.style.flex = '1';
+                    barContainer.style.background = 'rgba(255,255,255,0.05)';
+                    barContainer.style.height = '24px';
+                    barContainer.style.borderRadius = '4px';
+                    barContainer.style.overflow = 'hidden';
+                    barContainer.style.position = 'relative';
+
+                    // Bar
+                    const bar = document.createElement('div');
+                    bar.style.width = `${percentage}%`;
+                    bar.style.height = '100%';
+                    bar.style.background = '#d32f2f'; // Reddish color like screenshot
+                    bar.style.borderRadius = '4px';
+
+                    // Level Text (inside or outside?) Screenshot shows number outside
+                    // Let's put it outside
+
+                    barContainer.appendChild(bar);
+
+                    // Level Number
+                    const levelDiv = document.createElement('div');
+                    levelDiv.style.width = '40px';
+                    levelDiv.style.paddingLeft = '10px';
+                    levelDiv.style.color = '#fff';
+                    levelDiv.style.fontWeight = 'bold';
+                    levelDiv.textContent = level;
+
+                    row.appendChild(nameDiv);
+                    row.appendChild(barContainer);
+                    row.appendChild(levelDiv);
+
+                    weaponsContainer.appendChild(row);
+                });
+            } else {
                 weaponsContainer.innerHTML = '<p style="color: rgba(255,255,255,0.5); font-size: 13px;">No weapon data</p>';
             }
 
@@ -308,38 +414,6 @@
 
             // ID Assignment UI
             const isAdmin = window.isAdmin || !!localStorage.getItem('admin_password');
-            console.log('[PROFILE-V2] isAdmin check:', isAdmin);
-
-            // If not admin, show a login button (lock icon)
-            if (!isAdmin) {
-                console.log('[PROFILE-V2] Not admin, attempting to show lock icon');
-                const actionsContainer = document.querySelector('.profile-actions-compact');
-                if (actionsContainer) {
-                    if (!document.getElementById('admin-login-btn')) {
-                        const loginBtn = document.createElement('button');
-                        loginBtn.id = 'admin-login-btn';
-                        loginBtn.className = 'btn-secondary-compact';
-                        loginBtn.style.padding = '5px 10px';
-                        loginBtn.innerHTML = '🔒';
-                        loginBtn.title = 'Admin Login';
-                        loginBtn.onclick = () => {
-                            const pass = prompt('Enter Admin Password:');
-                            if (pass) {
-                                localStorage.setItem('admin_password', pass);
-                                window.isAdmin = true;
-                                // Refresh profile to show buttons
-                                openProfile(localPlayer.id, localPlayer.name);
-                                alert('Logged in! Buttons should appear.');
-                            }
-                        };
-                        actionsContainer.appendChild(loginBtn);
-                        console.log('[PROFILE-V2] Lock icon added');
-                    }
-                } else {
-                    console.error('[PROFILE-V2] .profile-actions-compact not found!');
-                }
-            }
-
             setupAssignmentUI(localPlayer, isAdmin);
 
             // Nickname History
@@ -351,7 +425,6 @@
 
             if (aliases && aliases.length > 0) {
                 nicknameCount.textContent = `(${aliases.length})`;
-
                 aliases.forEach(alias => {
                     const chip = document.createElement('span');
                     chip.className = 'alias-chip-compact';
@@ -363,7 +436,7 @@
                 aliasesList.innerHTML = '<p style="color: rgba(255,255,255,0.5); font-size: 13px;">No nickname history</p>';
             }
 
-            // ===== DESCRIPTION SECTION =====
+            // Description
             let descContainer = document.getElementById('profile-description-container');
             if (!descContainer) {
                 descContainer = document.createElement('div');
@@ -373,10 +446,7 @@
                 descContainer.style.background = 'rgba(255,255,255,0.05)';
                 descContainer.style.borderRadius = '4px';
                 descContainer.style.border = '1px solid rgba(255,255,255,0.1)';
-                // Insert after aliases list container (which is parent of aliasesList)
-                // Actually aliasesList is inside a container, let's append to profile-content
-                // But we want it in the right place. Let's find the nickname history section.
-                const historySection = document.querySelector('.profile-section-compact:last-child'); // Assuming it's the last one
+                const historySection = document.querySelector('.profile-section-compact:last-child');
                 if (historySection) {
                     historySection.parentNode.insertBefore(descContainer, historySection.nextSibling);
                 } else {
@@ -396,7 +466,7 @@
             const descText = document.createElement('div');
             descText.style.fontSize = '14px';
             descText.style.color = '#ddd';
-            descText.style.whiteSpace = 'pre-wrap'; // Preserve newlines
+            descText.style.whiteSpace = 'pre-wrap';
             descText.textContent = localPlayer.description || 'Brak opisu.';
             descContainer.appendChild(descText);
 
@@ -411,24 +481,7 @@
                 descContainer.appendChild(editDescBtn);
             }
 
-            // ===== HEADER UPDATE (AKA) =====
-            const nameEl = document.getElementById('profile-player-name');
-            nameEl.innerHTML = ''; // Clear
-
-            const nameText = document.createElement('span');
-            nameText.textContent = localPlayer.name;
-            nameEl.appendChild(nameText);
-
-            if (localPlayer.original_name && localPlayer.original_name !== localPlayer.name) {
-                const akaSpan = document.createElement('span');
-                akaSpan.style.fontSize = '14px';
-                akaSpan.style.color = 'rgba(255,255,255,0.5)';
-                akaSpan.style.marginLeft = '10px';
-                akaSpan.style.fontWeight = 'normal';
-                akaSpan.textContent = `(aka ${localPlayer.original_name})`;
-                nameEl.appendChild(akaSpan);
-            }
-
+            // Admin Edit AKA Button (in Header)
             if (isAdmin) {
                 const editAkaBtn = document.createElement('button');
                 editAkaBtn.innerHTML = '✏️';
@@ -448,14 +501,13 @@
                 nameEl.appendChild(editAkaBtn);
             }
 
-
             // ChivalryStats link
             const chivStatsLink = document.getElementById('view-chivstats');
             if (chivStatsLink) {
                 if (stats.playfabId) {
                     chivStatsLink.href = `https://chivalry2stats.com/player?id=${stats.playfabId}`;
                     chivStatsLink.target = '_blank';
-                    chivStatsLink.onclick = null; // Remove any previous handlers
+                    chivStatsLink.onclick = null;
                 } else {
                     chivStatsLink.href = '#';
                     chivStatsLink.onclick = (e) => { e.preventDefault(); alert('Brak PlayFab ID'); };

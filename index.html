@@ -31,7 +31,7 @@
                     <button id="add-player-btn">Dodaj Gracza</button>
                     <button id="refresh-nicknames-btn" class="secondary-btn" style="margin-left: 10px;">🔄 Odśwież
                         Nicki</button>
-                    <button id="backup-nicknames-btn" class="secondary-btn" style="margin-left: 10px;">💾 Backup
+                    <button id="backup-nicknames-btn" class="secondary-btn hidden" style="margin-left: 10px;">💾 Backup
                         AKA</button>
                 </div>
             </div>
@@ -159,7 +159,9 @@
             <div class="profile-header-compact">
                 <div>
                     <h1 id="profile-player-name" class="profile-name-compact">Loading...</h1>
-                    <span id="profile-tier-badge" class="tier-badge-compact"></span>
+                    <div class="profile-badges" style="display: flex; gap: 8px; margin-top: 5px; flex-wrap: wrap;">
+                        <!-- Badges injected by JS -->
+                    </div>
                 </div>
                 <button id="close-profile-btn" class="profile-close-btn">&times;</button>
             </div>
@@ -179,29 +181,8 @@
             <!-- Main Content -->
             <div id="profile-content" class="profile-content-compact hidden">
 
-                <!-- Quick Stats Grid -->
-                <div class="quick-stats-grid">
-                    <div class="quick-stat">
-                        <span class="quick-stat-label">Rank</span>
-                        <span class="quick-stat-value" id="profile-rank">-</span>
-                    </div>
-                    <div class="quick-stat">
-                        <span class="quick-stat-label">Level</span>
-                        <span class="quick-stat-value" id="profile-level">-</span>
-                    </div>
-                    <div class="quick-stat">
-                        <span class="quick-stat-label">Playtime</span>
-                        <span class="quick-stat-value" id="profile-hours">-</span>
-                    </div>
-                    <div class="quick-stat">
-                        <span class="quick-stat-label">Main Class</span>
-                        <span class="quick-stat-value" id="profile-class">-</span>
-                    </div>
-                </div>
-
-                <!-- Top Weapons -->
+                <!-- Top Weapons (No Header) -->
                 <div class="section-compact">
-                    <h3 class="section-title-compact">🗡️ Top Weapons</h3>
                     <div id="profile-top-weapons" class="weapons-grid-compact">
                         <!-- Populated by JS -->
                     </div>
@@ -248,7 +229,7 @@
     </div>
 
     <script src="script_fixed.js?v=fixed15"></script>
-    <script src="profile_v2.js?v=17"></script>
+    <script src="profile_v2.js?v=18"></script>
     <script src="enhancements.js"></script>
     <script src="stats-list.js?v=4"></script>
 </body>
