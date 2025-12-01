@@ -432,11 +432,6 @@
             alert('Błąd aktualizacji: ' + e.message);
         }
 
-        // ChivalryStats link
-        const chivStatsLink = document.getElementById('view-chivstats');
-        if (chivStatsLink && stats.playfabId) {
-            chivStatsLink.href = `https://chivalry2stats.com/player?id=${stats.playfabId}`;
-        }
     }
 
     // ===== OPEN ASSIGNMENT MODAL (INLINE) =====

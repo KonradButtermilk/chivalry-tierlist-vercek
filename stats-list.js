@@ -98,7 +98,9 @@ function showPlayerList(players, searchName, playerId) {
 
     document.getElementById('profile-player-name').textContent = `Wyniki: ${searchName}`;
     document.getElementById('profile-tier-badge').textContent = `${players.length} graczy`;
-    document.getElementById('profile-cache-badge').textContent = 'Wybierz';
+    document.getElementById('profile-tier-badge').textContent = `${players.length} graczy`;
+    const cacheBadge = document.getElementById('profile-cache-badge');
+    if (cacheBadge) cacheBadge.textContent = 'Wybierz';
 
     content.innerHTML = `
         <section class="profile-section">

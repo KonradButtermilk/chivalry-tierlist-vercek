@@ -1394,6 +1394,91 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function refreshSingleNickname(playerId) {
+        const player = findPlayerById(playerId);
+        if (!player) return;
+
+        showToast(`🔄 Odświeżanie nicku dla ${player.name}...`, 'info');
+        console.log(`[REFRESH] Single refresh for ${player.name} (${player.playfab_id || 'No ID'})`);
+
+        try {
+            let newNickname = 'Unknown';
+
+            // 1. Try Fetch by ID if exists
+            if (player.playfab_id) {
+                const response = await fetch(`/api/playfab-stats?playfabId=${player.playfab_id}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const stats = data.data;
+
+                    if (Array.isArray(stats.aliases) && stats.aliases.length > 0) {
+                        newNickname = stats.aliases[stats.aliases.length - 1];
+                    } else if (typeof stats.aliasHistory === 'string' && stats.aliasHistory.length > 0) {
+                        const aliases = stats.aliasHistory.split(',');
+                        newNickname = aliases[aliases.length - 1].trim();
+                    }
+                }
+            }
+
+            // 2. Fallback Search by Name (if no ID or ID fetch failed)
+            if (!newNickname || newNickname === 'Unknown') {
+                console.log('[REFRESH] ID lookup skipped or failed, trying fallback search...');
+                const searchRes = await fetch(`/api/playfab-stats?playerName=${encodeURIComponent(player.name)}`);
+                const searchData = await searchRes.json();
+
+                if (searchData.success && searchData.data && searchData.data.players) {
+                    // Try to match by ID if we have it, otherwise take the first result (risky but requested)
+                    let foundPlayer = null;
+                    if (player.playfab_id) {
+                        foundPlayer = searchData.data.players.find(p => p.playfabId === player.playfab_id || p.id === player.playfab_id);
+                    }
+
+                    // If not found by ID (or no ID), take the first result
+                    if (!foundPlayer && searchData.data.players.length > 0) {
+                        foundPlayer = searchData.data.players[0];
+                    }
+
+                    if (foundPlayer) {
+                        if (foundPlayer.name) newNickname = foundPlayer.name;
+                        else if (foundPlayer.aliases && foundPlayer.aliases.length > 0) {
+                            newNickname = foundPlayer.aliases[foundPlayer.aliases.length - 1];
+                        }
+                    }
+                }
+            }
+
+            // Update if needed
+            if (newNickname && newNickname !== 'Unknown' && newNickname !== player.name) {
+                const updateRes = await fetch('/api', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-admin-password': adminPassword
+                    },
+                    body: JSON.stringify({
+                        id: player.id,
+                        name: newNickname
+                    })
+                });
+
+                if (updateRes.ok) {
+                    player.name = newNickname;
+                    showToast(`✅ Zaktualizowano nick: ${newNickname}`, 'success');
+                    fetchData(); // Refresh UI
+                } else {
+                    showToast('❌ Błąd aktualizacji nicku', 'error');
+                }
+            } else {
+                if (newNickname === 'Unknown') showToast('⚠️ Nie znaleziono gracza', 'warning');
+                else showToast('ℹ️ Nick jest aktualny', 'info');
+            }
+
+        } catch (e) {
+            console.error(e);
+            showToast('❌ Błąd sieci', 'error');
+        }
+    }
+
     // Add listener for refresh button
     const refreshNicknamesBtn = document.getElementById('refresh-nicknames-btn');
     if (refreshNicknamesBtn) {
