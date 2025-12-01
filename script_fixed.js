@@ -1279,28 +1279,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             newNickname = parts[0].trim();
                         }
                     } else if (stats.LastKnownAlias) {
-                        newNickname = stats.LastKnownAlias;
-                    }
-
-                    // Sanity check for "Unknown" or empty
-                    if (!newNickname || newNickname === 'Unknown') {
-                        console.warn(`[REFRESH] Could not determine nickname for ${player.name}`);
-                        continue;
-                    }
-
-                    console.log(`[REFRESH] Current: "${player.name}", New: "${newNickname}"`);
-
-                    // Debug spaces
-                    if (newNickname.includes(' ')) {
-                        console.log(`[REFRESH] Nickname has spaces: "${newNickname}" (len: ${newNickname.length})`);
-                        for (let i = 0; i < newNickname.length; i++) {
-                            console.log(`[REFRESH] Char ${i}: ${newNickname[i]} (${newNickname.charCodeAt(i)})`);
-                        }
-                    }
-
-                    if (newNickname && newNickname !== 'Unknown' && newNickname !== player.name) {
-                        console.log(`[REFRESH] Updating ${player.name} -> ${newNickname}`);
-
                         // Update in DB
                         const updateRes = await fetch('/api', {
                             method: 'PUT',

@@ -245,6 +245,31 @@
 
         // ID Assignment UI
         const isAdmin = window.isAdmin || !!localStorage.getItem('admin_password');
+
+        // If not admin, show a login button (lock icon)
+        if (!isAdmin) {
+            const actionsContainer = document.querySelector('.profile-actions-compact');
+            if (actionsContainer && !document.getElementById('admin-login-btn')) {
+                const loginBtn = document.createElement('button');
+                loginBtn.id = 'admin-login-btn';
+                loginBtn.className = 'btn-secondary-compact';
+                loginBtn.style.padding = '5px 10px';
+                loginBtn.innerHTML = '🔒';
+                loginBtn.title = 'Admin Login';
+                loginBtn.onclick = () => {
+                    const pass = prompt('Enter Admin Password:');
+                    if (pass) {
+                        localStorage.setItem('admin_password', pass);
+                        window.isAdmin = true;
+                        // Refresh profile to show buttons
+                        openProfile(localPlayer.id, localPlayer.name);
+                        alert('Logged in! Buttons should appear.');
+                    }
+                };
+                actionsContainer.appendChild(loginBtn);
+            }
+        }
+
         setupAssignmentUI(localPlayer, isAdmin);
 
         // Nickname History
