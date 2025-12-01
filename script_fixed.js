@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Context Menu & Edit Modal
     const contextMenu = document.getElementById('context-menu');
     const ctxStats = document.getElementById('ctx-stats');
+    const ctxRefresh = document.getElementById('ctx-refresh');
     const ctxEdit = document.getElementById('ctx-edit');
     const ctxDelete = document.getElementById('ctx-delete');
     const editModal = document.getElementById('edit-modal');
@@ -481,6 +482,98 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+
+    if (ctxRefresh) {
+        ctxRefresh.addEventListener('click', async () => {
+            if (selectedPlayerId) {
+                contextMenu.classList.add('hidden');
+                await refreshSingleNickname(selectedPlayerId);
+            }
+        });
+    }
+
+    async function refreshSingleNickname(playerId) {
+        const player = findPlayerById(playerId);
+        if (!player || !player.playfab_id) {
+            showToast('⚠️ Gracz nie ma przypisanego ID', 'warning');
+            return;
+        }
+
+        showToast(`🔄 Odświeżanie nicku dla ${player.name}...`, 'info');
+        console.log(`[REFRESH] Single refresh for ${player.name} (${player.playfab_id})`);
+
+        try {
+            // Fetch latest data
+            const response = await fetch(`/api/playfab-stats?playfabId=${player.playfab_id}`);
+            if (response.ok) {
+                const data = await response.json();
+                const stats = data.data;
+
+                let newNickname = 'Unknown';
+
+                // Try aliases from ID lookup
+                if (Array.isArray(stats.aliases) && stats.aliases.length > 0) {
+                    // Use LAST alias
+                    newNickname = stats.aliases[stats.aliases.length - 1];
+                } else if (typeof stats.aliasHistory === 'string' && stats.aliasHistory.length > 0) {
+                    const aliases = stats.aliasHistory.split(',');
+                    // Use LAST alias
+                    newNickname = aliases[aliases.length - 1].trim();
+                }
+
+                // Fallback search
+                if (!newNickname || newNickname === 'Unknown') {
+                    console.log('[REFRESH] ID lookup failed, trying fallback search...');
+                    const searchRes = await fetch(`/api/playfab-stats?playerName=${encodeURIComponent(player.name)}`);
+                    const searchData = await searchRes.json();
+
+                    if (searchData.success && searchData.data && searchData.data.players) {
+                        const foundPlayer = searchData.data.players.find(p =>
+                            p.playfabId === player.playfab_id || p.id === player.playfab_id
+                        );
+
+                        if (foundPlayer) {
+                            if (foundPlayer.name) newNickname = foundPlayer.name;
+                            else if (foundPlayer.aliases && foundPlayer.aliases.length > 0) {
+                                newNickname = foundPlayer.aliases[foundPlayer.aliases.length - 1];
+                            }
+                        }
+                    }
+                }
+
+                // Update if needed
+                if (newNickname && newNickname !== 'Unknown' && newNickname !== player.name) {
+                    const updateRes = await fetch('/api', {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-admin-password': adminPassword
+                        },
+                        body: JSON.stringify({
+                            id: player.id,
+                            name: newNickname
+                        })
+                    });
+
+                    if (updateRes.ok) {
+                        player.name = newNickname;
+                        showToast(`✅ Zaktualizowano nick: ${newNickname}`, 'success');
+                        fetchData(); // Refresh UI
+                    } else {
+                        showToast('❌ Błąd aktualizacji nicku', 'error');
+                    }
+                } else {
+                    showToast('ℹ️ Nick jest aktualny', 'info');
+                }
+
+            } else {
+                showToast('❌ Błąd pobierania danych', 'error');
+            }
+        } catch (e) {
+            console.error(e);
+            showToast('❌ Błąd sieci', 'error');
+        }
+    }
 
     ctxDelete.addEventListener('click', () => {
         if (selectedPlayerId) {
@@ -1298,7 +1391,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (foundPlayer) {
                                 console.log(`[REFRESH] Fallback search found player:`, foundPlayer);
                                 if (foundPlayer.name) newNickname = foundPlayer.name;
-                                else if (foundPlayer.aliases && foundPlayer.aliases.length > 0) newNickname = foundPlayer.aliases[0];
+                                else if (foundPlayer.aliases && foundPlayer.aliases.length > 0) {
+                                    // Use the LAST alias in the list, assuming history is chronological (Old -> New)
+                                    newNickname = foundPlayer.aliases[foundPlayer.aliases.length - 1];
+                                }
                             } else {
                                 console.warn(`[REFRESH] Fallback search returned results but no ID match for ${player.name}`);
                             }
