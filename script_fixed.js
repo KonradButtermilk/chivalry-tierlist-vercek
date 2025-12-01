@@ -404,7 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
         div.appendChild(nameSpan);
 
         // AKA (Original Name)
-        if (player.original_name && player.original_name !== player.name) {
+        if (player.original_name) {
             const akaSpan = document.createElement('div');
             akaSpan.style.fontSize = '10px';
             akaSpan.style.color = 'rgba(255,255,255,0.6)';
