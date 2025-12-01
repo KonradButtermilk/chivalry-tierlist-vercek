@@ -403,8 +403,9 @@ document.addEventListener('DOMContentLoaded', () => {
         nameSpan.textContent = player.name;
         div.appendChild(nameSpan);
 
-        // AKA (Original Name)
-        if (player.original_name) {
+        // AKA (Original Name) - Smart Display
+        // Show only if names are significantly different
+        if (player.original_name && !areNamesSimilar(player.name, player.original_name)) {
             const akaSpan = document.createElement('div');
             akaSpan.style.fontSize = '10px';
             akaSpan.style.color = 'rgba(255,255,255,0.6)';
@@ -1529,6 +1530,59 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             renderAllTiers();
         });
+    }
+
+    // --- Helper Functions ---
+
+    function areNamesSimilar(name1, name2) {
+        if (!name1 || !name2) return false;
+        const n1 = name1.toLowerCase().trim();
+        const n2 = name2.toLowerCase().trim();
+
+        // Exact match (ignoring case)
+        if (n1 === n2) return true;
+
+        // One contains the other (if length difference is small, e.g. < 4 chars)
+        // e.g. "Shagedopie" vs "Shagedopie (Clan)"
+        if ((n1.includes(n2) || n2.includes(n1)) && Math.abs(n1.length - n2.length) < 4) {
+            return true;
+        }
+
+        // Levenshtein distance check (allow up to 2 edits)
+        const dist = levenshtein(n1, n2);
+        if (dist <= 2) return true;
+
+        return false;
+    }
+
+    function levenshtein(a, b) {
+        const matrix = [];
+
+        for (let i = 0; i <= b.length; i++) {
+            matrix[i] = [i];
+        }
+
+        for (let j = 0; j <= a.length; j++) {
+            matrix[0][j] = j;
+        }
+
+        for (let i = 1; i <= b.length; i++) {
+            for (let j = 1; j <= a.length; j++) {
+                if (b.charAt(i - 1) == a.charAt(j - 1)) {
+                    matrix[i][j] = matrix[i - 1][j - 1];
+                } else {
+                    matrix[i][j] = Math.min(
+                        matrix[i - 1][j - 1] + 1, // substitution
+                        Math.min(
+                            matrix[i][j - 1] + 1, // insertion
+                            matrix[i - 1][j] + 1 // deletion
+                        )
+                    );
+                }
+            }
+        }
+
+        return matrix[b.length][a.length];
     }
 
     // --- Expose functions for enhancements.js and stats-list.js ---
