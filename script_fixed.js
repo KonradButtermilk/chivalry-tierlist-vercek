@@ -396,7 +396,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="selection-item-aka collapsed">
                             <span class="aka-label">AKA:</span> ${history.join(', ')}
                         </div>
-                        <button class="expand-history-btn" title="Pokaż całą historię">⬇️</button>
+                        <button class="expand-history-btn" title="Pokaż całą historię">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
                     </div>
                     ` : '<div class="selection-item-aka"><span class="aka-label">AKA:</span> Brak historii</div>'}
                 </div>
@@ -407,30 +409,53 @@ document.addEventListener('DOMContentLoaded', () => {
             if (hasHistory) {
                 const expandBtn = item.querySelector('.expand-history-btn');
                 const akaDiv = item.querySelector('.selection-item-aka');
-                expandBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>'; // Chevron Down
 
-                expandBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
+                const toggleHistory = (e) => {
+                    if (e) e.stopPropagation();
                     akaDiv.classList.toggle('collapsed');
                     akaDiv.classList.toggle('expanded');
                     const isExpanded = akaDiv.classList.contains('expanded');
                     expandBtn.innerHTML = isExpanded
                         ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>' // Chevron Up
                         : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>'; // Chevron Down
-                });
+                };
+
+                expandBtn.addEventListener('click', toggleHistory);
+
+                // Make the whole item clickable for expansion (except the select button)
+                item.style.cursor = 'pointer';
+                item.addEventListener('click', toggleHistory);
             }
 
             // Select Logic
             const btn = item.querySelector('.selection-item-btn');
-            btn.addEventListener('click', async () => {
-                // Duplicate Check
-                const existingPlayer = Object.values(tierData).flat().find(p =>
-                    (p.playfab_id && (p.playfab_id === player.playfabId || p.playfab_id === player.id)) ||
-                    p.name === currentName
-                );
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation(); // Prevent item click (history toggle)
+
+                // Enhanced Duplicate Check
+                const candidateId = (player.playfabId || player.id || '').toString().toLowerCase();
+                const candidateName = (currentName || '').toLowerCase();
+
+                console.log(`[DUPLICATE CHECK] Checking candidate: ${candidateName} (ID: ${candidateId})`);
+
+                const existingPlayer = Object.values(tierData).flat().find(p => {
+                    const pId = (p.playfab_id || p.id || '').toString().toLowerCase();
+                    const pName = (p.name || '').toLowerCase();
+
+                    // Check ID match (Strong check)
+                    if (candidateId && pId === candidateId) return true;
+
+                    // Check Name match (Soft check)
+                    if (pName === candidateName) return true;
+
+                    return false;
+                });
 
                 if (existingPlayer) {
-                    if (!confirm(`⚠️ Ten gracz (${currentName}) prawdopodobnie już jest na liście (Tier ${existingPlayer.tier}).\nCzy na pewno chcesz dodać duplikat?`)) {
+                    const existingId = (existingPlayer.playfab_id || existingPlayer.id || '').toString().toLowerCase();
+                    const reason = existingId === candidateId ? 'ID' : 'Nazwa';
+
+                    if (!confirm(`⚠️ Ten gracz (${currentName}) prawdopodobnie już jest na liście (Tier ${existingPlayer.tier}).\nPowód detekcji: ${reason}\nCzy na pewno chcesz dodać duplikat?`)) {
                         return;
                     }
                 }
@@ -584,8 +609,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function showContextMenu(e, player) {
         selectedPlayerId = player.id;
         window.selectedPlayerId = player.id; // Expose to global scope for stats-list.js
-        contextMenu.style.top = `${e.clientY}px`;
-        contextMenu.style.left = `${e.clientX}px`;
+        contextMenu.style.top = `${e.clientY} px`;
+        contextMenu.style.left = `${e.clientX} px`;
         contextMenu.classList.remove('hidden');
     }
 
@@ -784,7 +809,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isAdmin && selectedPlayerIds.size > 0) {
             const idsToDelete = Array.from(selectedPlayerIds);
 
-            if (confirm(`Czy na pewno chcesz usunąć ${idsToDelete.length} graczy?`)) {
+            if (confirm(`Czy na pewno chcesz usunąć ${idsToDelete.length} graczy ? `)) {
                 // Optimistic update
                 for (const id of idsToDelete) {
                     findAndRemoveLocal(id);
@@ -845,7 +870,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const toast = document.createElement('div');
-        toast.className = `toast toast-${type}`;
+        toast.className = `toast toast - ${type} `;
         toast.textContent = message;
 
         toastContainer.appendChild(toast);
@@ -899,7 +924,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (player) {
             const tierNames = ['GOAT', 'Tier 1', 'Tier 2', 'Tier 3', 'Tier 4', 'Tier 5', 'Tier 6'];
             const tierBadge = document.getElementById('profile-tier-badge');
-            if (tierBadge) tierBadge.textContent = tierNames[player.tier] || `Tier ${player.tier}`;
+            if (tierBadge) tierBadge.textContent = tierNames[player.tier] || `Tier ${player.tier} `;
         }
 
         try {
@@ -913,7 +938,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Try to fetch full stats directly
                 try {
-                    const response = await fetch(`/api/playfab-stats?playfabId=${player.playfab_id}`);
+                    const response = await fetch(`/ api / playfab - stats ? playfabId = ${player.playfab_id} `);
                     const data = await response.json();
 
                     if (data.success && data.data) {
@@ -929,7 +954,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 2. If no stats yet, search by name
             if (!stats) {
                 console.log('[Profile] Searching by name:', playerName);
-                const response = await fetch(`/api/playfab-stats?` + new URLSearchParams({
+                const response = await fetch(`/ api / playfab - stats ? ` + new URLSearchParams({
                     playerName: playerName
                 }));
                 const data = await response.json();
@@ -953,7 +978,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // Now fetch full details using the PlayFab ID
                     console.log('[Profile] Fetching detailed stats for:', playfabId);
-                    const detailResponse = await fetch(`/api/playfab-stats?playfabId=${playfabId}`);
+                    const detailResponse = await fetch(`/ api / playfab - stats ? playfabId = ${playfabId} `);
                     const detailData = await detailResponse.json();
 
                     if (detailData.success && detailData.data) {
@@ -988,9 +1013,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const hoursEl = document.getElementById('profile-hours');
             const classEl = document.getElementById('profile-class');
 
-            if (rankEl) rankEl.textContent = globalRank !== '-' ? `#${globalRank.toLocaleString()}` : '-';
+            if (rankEl) rankEl.textContent = globalRank !== '-' ? `#${globalRank.toLocaleString()} ` : '-';
             if (levelEl) levelEl.textContent = level || '-';
-            if (hoursEl) hoursEl.textContent = playtimeHours > 0 ? `${playtimeHours.toLocaleString()}h` : '-';
+            if (hoursEl) hoursEl.textContent = playtimeHours > 0 ? `${playtimeHours.toLocaleString()} h` : '-';
 
             // Determine favorite class from experience values
             let favoriteClass = 'Brak danych';
@@ -1026,12 +1051,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     const item = document.createElement('div');
                     item.className = 'weapon-item';
                     item.innerHTML = `
-                        <div class="weapon-info">
+                < div class="weapon-info" >
                             <div class="weapon-rank">${index + 1}</div>
                             <div class="weapon-name">${weapon.name}</div>
-                        </div>
-                        <div class="weapon-xp">${(weapon.xp / 1000).toFixed(1)}k XP</div>
-                    `;
+                        </div >
+                <div class="weapon-xp">${(weapon.xp / 1000).toFixed(1)}k XP</div>
+            `;
                     topWeaponsContainer.appendChild(item);
                 });
 
@@ -1051,14 +1076,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     const item = document.createElement('div');
                     item.className = 'class-exp-item';
                     item.innerHTML = `
-                        <div class="class-exp-header">
+                < div class="class-exp-header" >
                             <span class="class-name">${className}</span>
                             <span class="class-xp-value">${(xp / 1000).toFixed(1)}k XP</span>
-                        </div>
-                        <div class="class-exp-bar">
-                            <div class="class-exp-fill" style="width: ${percentage}%"></div>
-                        </div>
-                    `;
+                        </div >
+                <div class="class-exp-bar">
+                    <div class="class-exp-fill" style="width: ${percentage}%"></div>
+                </div>
+            `;
                     classExpContainer.appendChild(item);
                 });
             }
@@ -1086,7 +1111,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         '#d4af37'
                     ][activityLevel];
 
-                    day.title = `Aktywność: ${['Brak', 'Niska', 'Średnia', 'Wysoka'][activityLevel]}`;
+                    day.title = `Aktywność: ${['Brak', 'Niska', 'Średnia', 'Wysoka'][activityLevel]} `;
                     activityChart.appendChild(day);
                 }
             }
