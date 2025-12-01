@@ -339,71 +339,97 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast('❌ Błąd dodawania gracza', 'error');
         }
     }
-
     function showPlayerSelectionModal(players) {
         console.log('[SELECTION] Showing modal with players:', players);
         const modal = document.getElementById('player-selection-modal');
         const list = document.getElementById('player-selection-list');
+        const headerStats = document.getElementById('selection-header-stats');
 
         if (!modal || !list) return;
 
         list.innerHTML = '';
 
+        // Header Stats
+        if (headerStats) {
+            const totalSearches = players.reduce((sum, p) => sum + (p.lookupCount || 0), 0);
+            headerStats.innerHTML = `
+                <div class="selection-stats-badge">
+                    <span>🔍 Total Searches: ${totalSearches}</span>
+                </div>
+            `;
+        }
+
         players.forEach((player, idx) => {
             const item = document.createElement('div');
-            item.className = 'selection-item compact'; // Added compact class
+            item.className = 'selection-item compact';
 
             // Determine Current Name and History
             let currentName = 'Unknown';
             let history = [];
 
-            // 1. Try aliases array (preferred)
             if (player.aliases && Array.isArray(player.aliases) && player.aliases.length > 0) {
-                // Assuming last alias is current, or first? API usually returns aliases in order.
-                // Let's assume the API returns [oldest, ..., newest] or [newest, ..., oldest].
-                // Based on previous code, we took aliases[0] as display name.
-                // Let's assume aliases[0] is the most relevant/current.
                 currentName = player.aliases[0];
                 history = player.aliases.slice(1);
-            }
-            // 2. Try aliasHistory string
-            else if (player.aliasHistory) {
+            } else if (player.aliasHistory) {
                 const parts = player.aliasHistory.split(',').map(s => s.trim()).filter(s => s);
                 if (parts.length > 0) {
                     currentName = parts[0];
                     history = parts.slice(1);
                 }
-            }
-            // 3. Fallback
-            else {
+            } else {
                 currentName = player.username || player.displayName || player.name || 'Unknown';
             }
 
-            // If we have a separate 'name' property that differs from currentName, maybe that's the "current" one?
-            // But usually 'name' in the search result IS the matched name.
-
-            // Format history string
-            const historyStr = history.length > 0 ? history.join(', ') : 'Brak historii zmian nicku';
-
-            console.log(`[SELECTION] Player ${idx}: ${currentName} (History: ${history.length})`);
             const level = player.globalXp ? Math.floor(player.globalXp / 1000) : '?';
             const lookupCount = player.lookupCount || 0;
+            const hasHistory = history.length > 0;
 
             item.innerHTML = `
                 <div class="selection-item-info">
                     <div class="selection-item-header">
                         <span class="selection-item-name">${currentName}</span>
                         <span class="selection-item-level">Lvl ${level}</span>
+                        <span class="selection-item-searches">(${lookupCount} searches)</span>
                     </div>
-                    <div class="selection-item-aka" title="${historyStr}">
-                        <span class="aka-label">AKA:</span> ${historyStr}
+                    ${hasHistory ? `
+                    <div class="selection-item-aka-container">
+                        <div class="selection-item-aka collapsed">
+                            <span class="aka-label">AKA:</span> ${history.join(', ')}
+                        </div>
+                        <button class="expand-history-btn" title="Pokaż całą historię">⬇️</button>
                     </div>
+                    ` : '<div class="selection-item-aka"><span class="aka-label">AKA:</span> Brak historii</div>'}
                 </div>
                 <button class="selection-item-btn">Wybierz</button>
             `;
 
+            // Expand History Logic
+            if (hasHistory) {
+                const expandBtn = item.querySelector('.expand-history-btn');
+                const akaDiv = item.querySelector('.selection-item-aka');
+                expandBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    akaDiv.classList.toggle('collapsed');
+                    akaDiv.classList.toggle('expanded');
+                    expandBtn.textContent = akaDiv.classList.contains('expanded') ? '⬆️' : '⬇️';
+                });
+            }
+
+            // Select Logic
             const btn = item.querySelector('.selection-item-btn');
             btn.addEventListener('click', async () => {
+                // Duplicate Check
+                const existingPlayer = Object.values(tierData).flat().find(p =>
+                    (p.playfab_id && (p.playfab_id === player.playfabId || p.playfab_id === player.id)) ||
+                    p.name === currentName
+                );
+
+                if (existingPlayer) {
+                    if (!confirm(`⚠️ Ten gracz (${currentName}) prawdopodobnie już jest na liście (Tier ${existingPlayer.tier}).\nCzy na pewno chcesz dodać duplikat?`)) {
+                        return;
+                    }
+                }
+
                 modal.classList.add('hidden');
                 await addPlayerFromAPI(player);
             });
