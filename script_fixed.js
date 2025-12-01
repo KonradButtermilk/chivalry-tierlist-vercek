@@ -361,6 +361,13 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('[ADD-API] Extracted displayName:', displayName);
         const playfabId = apiPlayer.playfabId || apiPlayer.id;
 
+        // Duplicate Check: Prevent adding same ID twice
+        const existingPlayer = findPlayerById(playfabId);
+        if (existingPlayer) {
+            showToast(`⚠️ Gracz ${existingPlayer.name} (Tier ${existingPlayer.tier}) już istnieje!`, 'warning');
+            return;
+        }
+
         // Fetch detailed stats to get current nickname if we don't have a good one
         // OR if we just want to be sure (since ID lookup might return stripped data)
         try {
@@ -1583,19 +1590,34 @@ document.addEventListener('DOMContentLoaded', () => {
     // Shared refresh logic
     async function refreshPlayerNickname(player) {
         try {
-            let newNickname = 'Unknown';
-            let stats = null;
+            let newNickname = null;
+            const playfabId = player.playfab_id || player.playfabId || player.id;
 
-            // 1. Try fetching by ID
-            if (player.playfab_id) {
-                const response = await fetch(`/api/playfab-stats?playfabId=${player.playfab_id}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    stats = data.data;
+            // 1. Try new ID API (via Proxy) first - most reliable
+            if (playfabId && /^[0-9A-Fa-f]{14,16}$/.test(playfabId)) {
+                try {
+                    const response = await fetch(`/api/playfab-stats?playfabId=${playfabId}&type=id`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.aliasHistory) {
+                            const parts = data.aliasHistory.split(',');
+                            if (parts.length > 0) newNickname = parts[0].trim();
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[REFRESH] New API failed, falling back:', e);
+                }
+            }
 
-                    if (Array.isArray(stats.aliases) && stats.aliases.length > 0) {
-                        newNickname = stats.aliases[0];
-                    } else if (typeof stats.aliasHistory === 'string' && stats.aliasHistory.length > 0) {
+            // 2. Fallback: Detailed Stats API (Old method)
+            if (!newNickname && playfabId) {
+                const response = await fetch(`/api/playfab-stats?playfabId=${playfabId}`);
+                const data = await response.json();
+
+                if (data.success && data.data) {
+                    const stats = data.data;
+                    if (stats.displayName) newNickname = stats.displayName;
+                    else if (stats.aliasHistory) {
                         const parts = stats.aliasHistory.split(',');
                         if (parts.length > 0) newNickname = parts[0].trim();
                     } else if (stats.LastKnownAlias) {
@@ -1604,29 +1626,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // 2. Fallback: Search by name if ID lookup failed or no ID
-            if (!newNickname || newNickname === 'Unknown') {
-                // Search by current name
+            // 3. Fallback: Search by name (Last resort)
+            if (!newNickname) {
+                // ... existing search logic ...
                 const searchRes = await fetch(`/api/playfab-stats?playerName=${encodeURIComponent(player.name)}`);
                 const searchData = await searchRes.json();
-
+                // ... (keep existing search logic)
                 if (searchData.success && searchData.data && searchData.data.players) {
                     let foundPlayer = null;
-
-                    // Try to match by ID if we have it
-                    if (player.playfab_id) {
+                    if (playfabId) {
                         foundPlayer = searchData.data.players.find(p =>
-                            (p.playfabId === player.playfab_id) ||
-                            (p.id === player.playfab_id)
+                            (p.playfabId === playfabId) || (p.id === playfabId)
                         );
                     }
-
-                    // If not found by ID (or no ID), take the first result
-                    // This is the key change for players without ID
                     if (!foundPlayer && searchData.data.players.length > 0) {
                         foundPlayer = searchData.data.players[0];
                     }
-
                     if (foundPlayer) {
                         if (foundPlayer.name) newNickname = foundPlayer.name;
                         else if (foundPlayer.aliases && foundPlayer.aliases.length > 0) {
