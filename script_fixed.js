@@ -1659,22 +1659,34 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // 3. Update if we found a valid new nickname
-            if (newNickname && newNickname !== 'Unknown' && newNickname !== player.name) {
-                const updateRes = await fetch('/api', {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-admin-password': adminPassword
-                    },
-                    body: JSON.stringify({
-                        id: player.id,
-                        name: newNickname
-                    })
-                });
+            if (newNickname && newNickname !== 'Unknown') {
+                const currentName = player.name ? player.name.trim() : '';
+                const newName = newNickname.trim();
 
-                if (updateRes.ok) {
-                    player.name = newNickname;
-                    return { updated: true, newNickname };
+                console.log(`[REFRESH] Comparing: '${currentName}' vs '${newName}'`);
+
+                if (currentName !== newName) {
+                    const updateRes = await fetch('/api', {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-admin-password': adminPassword
+                        },
+                        body: JSON.stringify({
+                            id: player.id,
+                            name: newName
+                        })
+                    });
+
+                    if (updateRes.ok) {
+                        player.name = newName;
+                        return { updated: true, newNickname: newName };
+                    } else {
+                        console.error('[REFRESH] Update failed:', updateRes.status);
+                    }
+                } else {
+                    console.log('[REFRESH] Name is already up to date.');
+                    return { updated: false, message: 'Name is already up to date' };
                 }
             }
 
@@ -1683,6 +1695,20 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) {
             console.error(`[REFRESH] Error for ${player.name}:`, e);
             return { updated: false, error: e };
+        }
+    }
+
+    async function refreshSingleNickname(player) {
+        showToast(`🔄 Odświeżam nick gracza ${player.name}...`, 'info');
+        const result = await refreshPlayerNickname(player);
+
+        if (result.updated) {
+            showToast(`✅ Zaktualizowano: ${result.newNickname}`, 'success');
+            renderAllTiers();
+        } else if (result.message) {
+            showToast(`ℹ️ ${result.message}`, 'info');
+        } else {
+            showToast('❌ Nie znaleziono nowego nicku', 'error');
         }
     }
 
