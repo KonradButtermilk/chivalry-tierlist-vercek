@@ -256,8 +256,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function addPlayerFromAPI(apiPlayer) {
-        // Fix: search results use 'username', not 'displayName'
-        const displayName = apiPlayer.username || apiPlayer.displayName || apiPlayer.name;
+        console.log('[ADD-API] Received player:', apiPlayer);
+
+        // Fix: Use aliases array from API response
+        let displayName = 'Unknown';
+        if (apiPlayer.aliases && apiPlayer.aliases.length > 0) {
+            displayName = apiPlayer.aliases[0];
+        } else if (apiPlayer.aliasHistory) {
+            displayName = apiPlayer.aliasHistory.split(',')[0].trim();
+        } else {
+            displayName = apiPlayer.username || apiPlayer.displayName || apiPlayer.name || 'Unknown';
+        }
+
+        console.log('[ADD-API] Extracted displayName:', displayName);
         const playfabId = apiPlayer.playfabId || apiPlayer.id;
 
         // Fetch detailed stats to get current nickname
@@ -268,6 +279,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const currentNickname = detailData.success && detailData.data
                 ? (detailData.data.displayName || displayName)
                 : displayName;
+
+            console.log('[ADD-API] Final nickname:', currentNickname);
 
             // Add player with API data
             const newPlayer = await apiCall('POST', {
