@@ -1290,6 +1290,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     console.log(`[REFRESH] Current: "${player.name}", New: "${newNickname}"`);
 
+                    // Debug spaces
+                    if (newNickname.includes(' ')) {
+                        console.log(`[REFRESH] Nickname has spaces: "${newNickname}" (len: ${newNickname.length})`);
+                        for (let i = 0; i < newNickname.length; i++) {
+                            console.log(`[REFRESH] Char ${i}: ${newNickname[i]} (${newNickname.charCodeAt(i)})`);
+                        }
+                    }
+
                     if (newNickname && newNickname !== 'Unknown' && newNickname !== player.name) {
                         console.log(`[REFRESH] Updating ${player.name} -> ${newNickname}`);
 
