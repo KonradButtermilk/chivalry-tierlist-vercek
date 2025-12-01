@@ -300,6 +300,138 @@
             aliasesList.innerHTML = '<p style="color: rgba(255,255,255,0.5); font-size: 13px;">No nickname history</p>';
         }
 
+        // ===== DESCRIPTION SECTION =====
+        let descContainer = document.getElementById('profile-description-container');
+        if (!descContainer) {
+            descContainer = document.createElement('div');
+            descContainer.id = 'profile-description-container';
+            descContainer.style.marginTop = '15px';
+            descContainer.style.padding = '10px';
+            descContainer.style.background = 'rgba(255,255,255,0.05)';
+            descContainer.style.borderRadius = '4px';
+            descContainer.style.border = '1px solid rgba(255,255,255,0.1)';
+            // Insert after aliases list container (which is parent of aliasesList)
+            // Actually aliasesList is inside a container, let's append to profile-content
+            // But we want it in the right place. Let's find the nickname history section.
+            const historySection = document.querySelector('.profile-section-compact:last-child'); // Assuming it's the last one
+            if (historySection) {
+                historySection.parentNode.insertBefore(descContainer, historySection.nextSibling);
+            } else {
+                document.getElementById('profile-content').appendChild(descContainer);
+            }
+        }
+
+        descContainer.innerHTML = '';
+        const descTitle = document.createElement('div');
+        descTitle.style.fontSize = '12px';
+        descTitle.style.color = '#888';
+        descTitle.style.marginBottom = '5px';
+        descTitle.style.fontWeight = 'bold';
+        descTitle.innerHTML = '📝 OPIS GRACZA';
+        descContainer.appendChild(descTitle);
+
+        const descText = document.createElement('div');
+        descText.style.fontSize = '14px';
+        descText.style.color = '#ddd';
+        descText.style.whiteSpace = 'pre-wrap'; // Preserve newlines
+        descText.textContent = localPlayer.description || 'Brak opisu.';
+        descContainer.appendChild(descText);
+
+        if (isAdmin) {
+            const editDescBtn = document.createElement('button');
+            editDescBtn.className = 'btn-secondary-compact';
+            editDescBtn.style.marginTop = '10px';
+            editDescBtn.style.fontSize = '11px';
+            editDescBtn.style.width = '100%';
+            editDescBtn.innerHTML = '✏️ Edytuj Opis';
+            editDescBtn.onclick = () => editDescription(localPlayer);
+            descContainer.appendChild(editDescBtn);
+        }
+
+        // ===== HEADER UPDATE (AKA) =====
+        const nameEl = document.getElementById('profile-player-name');
+        nameEl.innerHTML = ''; // Clear
+
+        const nameText = document.createElement('span');
+        nameText.textContent = localPlayer.name;
+        nameEl.appendChild(nameText);
+
+        if (localPlayer.original_name && localPlayer.original_name !== localPlayer.name) {
+            const akaSpan = document.createElement('span');
+            akaSpan.style.fontSize = '14px';
+            akaSpan.style.color = 'rgba(255,255,255,0.5)';
+            akaSpan.style.marginLeft = '10px';
+            akaSpan.style.fontWeight = 'normal';
+            akaSpan.textContent = `(aka ${localPlayer.original_name})`;
+            nameEl.appendChild(akaSpan);
+        }
+
+        if (isAdmin) {
+            const editAkaBtn = document.createElement('button');
+            editAkaBtn.innerHTML = '✏️';
+            editAkaBtn.style.background = 'none';
+            editAkaBtn.style.border = 'none';
+            editAkaBtn.style.cursor = 'pointer';
+            editAkaBtn.style.fontSize = '14px';
+            editAkaBtn.style.marginLeft = '8px';
+            editAkaBtn.style.opacity = '0.5';
+            editAkaBtn.title = 'Edytuj oryginalny nick';
+            editAkaBtn.onmouseover = () => editAkaBtn.style.opacity = '1';
+            editAkaBtn.onmouseout = () => editAkaBtn.style.opacity = '0.5';
+            editAkaBtn.onclick = (e) => {
+                e.stopPropagation();
+                editOriginalName(localPlayer);
+            };
+            nameEl.appendChild(editAkaBtn);
+        }
+    }
+
+    // ===== EDIT HELPERS =====
+    async function editOriginalName(player) {
+        const newAka = prompt('Podaj oryginalny nick (AKA):', player.original_name || player.name);
+        if (newAka !== null) {
+            await updatePlayerField(player.id, 'original_name', newAka);
+            player.original_name = newAka;
+            openProfile(player.id, player.name);
+        }
+    }
+
+    async function editDescription(player) {
+        const newDesc = prompt('Podaj opis gracza:', player.description || '');
+        if (newDesc !== null) {
+            await updatePlayerField(player.id, 'description', newDesc);
+            player.description = newDesc;
+            openProfile(player.id, player.name);
+        }
+    }
+
+    async function updatePlayerField(id, field, value) {
+        try {
+            const response = await fetch('/api', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-admin-password': localStorage.getItem('admin_password')
+                },
+                body: JSON.stringify({
+                    id: id,
+                    [field]: value
+                })
+            });
+            if (!response.ok) throw new Error('Update failed');
+
+            // Update global data
+            if (window.tierData) {
+                Object.values(window.tierData).flat().forEach(p => {
+                    if (String(p.id) === String(id)) {
+                        p[field] = value;
+                    }
+                });
+            }
+        } catch (e) {
+            alert('Błąd aktualizacji: ' + e.message);
+        }
+
         // ChivalryStats link
         const chivStatsLink = document.getElementById('view-chivstats');
         if (chivStatsLink && stats.playfabId) {

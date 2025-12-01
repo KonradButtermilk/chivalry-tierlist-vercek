@@ -227,6 +227,11 @@ module.exports = async (req, res) => {
                 values.push(source);
                 historyDetails.push(`Source updated: ${source}`);
             }
+            if (body.original_name !== undefined && body.original_name !== currentPlayer.original_name) {
+                updates.push(`original_name = $${idx++}`);
+                values.push(body.original_name);
+                historyDetails.push(`AKA updated: ${currentPlayer.original_name || 'none'} -> ${body.original_name}`);
+            }
 
             if (updates.length === 0) {
                 await client.end();
