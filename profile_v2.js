@@ -191,6 +191,25 @@
                 console.warn('[PROFILE-V2] History fetch failed:', e);
             }
 
+            // Fallback: If no aliases found, try searching by ID string (sometimes works)
+            if ((!stats.aliases || stats.aliases.length === 0) && stats.playfabId) {
+                try {
+                    console.log('[PROFILE-V2] Trying fallback history fetch by ID:', stats.playfabId);
+                    const idRes = await fetch(`/api/playfab-stats?playerName=${stats.playfabId}`);
+                    const idData = await idRes.json();
+                    if (idData.success && idData.data && idData.data.players) {
+                        const match = idData.data.players.find(p => p.playfabId === stats.playfabId || p.id === stats.playfabId);
+                        if (match) {
+                            console.log('[PROFILE-V2] Found history match by ID:', match);
+                            if (match.aliases) stats.aliases = match.aliases;
+                            if (match.aliasHistory) stats.aliasHistory = match.aliasHistory;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[PROFILE-V2] Fallback history fetch failed:', e);
+                }
+            }
+
             console.log('[PROFILE-V2] Got stats:', stats);
 
             // Render profile
@@ -777,6 +796,14 @@
                                 p.name = playerName; // Update name to match assigned ID
                             }
                         });
+                    }
+
+                    // Force UI refresh
+                    if (window.loadPlayers) {
+                        console.log('[PROFILE-V2] Refreshing UI via loadPlayers');
+                        window.loadPlayers();
+                    } else if (window.renderAllTiers) {
+                        window.renderAllTiers();
                     }
 
                     // Show success message
