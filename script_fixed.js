@@ -1130,9 +1130,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const currentPlayFabId = assignIdBtn.dataset.playfabId;
             const targetPlayerId = selectedPlayerId;
 
+            console.log('[ASSIGN] Assigning PlayFab ID:', currentPlayFabId, 'to player:', targetPlayerId);
+            console.log('[ASSIGN] selectedPlayerId:', selectedPlayerId);
+            console.log('[ASSIGN] dataset.playfabId:', assignIdBtn.dataset.playfabId);
+
             if (currentPlayFabId && targetPlayerId) {
                 if (confirm('Czy na pewno chcesz przypisać to ID do gracza?')) {
                     try {
+                        console.log('[ASSIGN] Sending PUT request...');
                         // Use the main API endpoint
                         const response = await fetch('/api', {
                             method: 'PUT',
@@ -1146,18 +1151,30 @@ document.addEventListener('DOMContentLoaded', () => {
                             })
                         });
 
+                        console.log('[ASSIGN] Response status:', response.status);
+                        const responseData = await response.json();
+                        console.log('[ASSIGN] Response data:', responseData);
+
                         if (response.ok) {
+                            console.log('[ASSIGN] Successfully assigned ID');
                             showToast('✅ ID przypisane pomyślnie!', 'success');
                             const player = findPlayerById(targetPlayerId);
-                            if (player) player.playfab_id = currentPlayFabId;
+                            if (player) {
+                                player.playfab_id = currentPlayFabId;
+                                console.log('[ASSIGN] Updated player:', player);
+                            }
+                            renderAllTiers();
                         } else {
+                            console.error('[ASSIGN] API returned error:', responseData);
                             throw new Error('Failed to update');
                         }
                     } catch (err) {
-                        console.error('Assign ID error:', err);
+                        console.error('[ASSIGN] Error:', err);
                         showToast('❌ Błąd przypisywania ID', 'error');
                     }
                 }
+            } else {
+                console.error('[ASSIGN] Missing data - currentPlayFabId:', currentPlayFabId, 'targetPlayerId:', targetPlayerId);
             }
         });
     }
