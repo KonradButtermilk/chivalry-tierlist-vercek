@@ -1486,6 +1486,51 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('[INIT] Refresh nicknames button listener added');
     }
 
+
+    // Backup Nicknames Button
+    const backupNicknamesBtn = document.getElementById('backup-nicknames-btn');
+    if (backupNicknamesBtn) {
+        backupNicknamesBtn.addEventListener('click', async () => {
+            if (!isAdmin) {
+                showToast('❌ Wymagane uprawnienia administratora', 'error');
+                return;
+            }
+
+            if (!confirm('Czy na pewno chcesz skopiować obecne nicki do pola AKA dla wszystkich graczy? (Tylko jeśli AKA jest puste)')) {
+                return;
+            }
+
+            showToast('💾 Rozpoczynanie backupu nicków...', 'info');
+            const allPlayers = Object.values(tierData).flat();
+            let count = 0;
+            let errorCount = 0;
+
+            for (const player of allPlayers) {
+                // Only update if original_name is missing or empty
+                if (!player.original_name) {
+                    try {
+                        await apiCall('PUT', {
+                            id: player.id,
+                            original_name: player.name
+                        });
+                        player.original_name = player.name;
+                        count++;
+                    } catch (e) {
+                        console.error('[BACKUP] Failed for', player.name, e);
+                        errorCount++;
+                    }
+                }
+            }
+
+            if (errorCount > 0) {
+                showToast(`⚠️ Zakończono. Zaktualizowano: ${count}. Błędy: ${errorCount}`, 'warning');
+            } else {
+                showToast(`✅ Zakończono sukcesem! Zaktualizowano: ${count} graczy.`, 'success');
+            }
+            renderAllTiers();
+        });
+    }
+
     // --- Expose functions for enhancements.js and stats-list.js ---
     window.loadPlayers = fetchData;
     window.updatePlayerTier = movePlayer;
