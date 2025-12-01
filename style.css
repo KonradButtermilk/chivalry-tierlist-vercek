@@ -1735,23 +1735,25 @@ textarea:focus {
 }
 
 .selection-item-btn {
-    background: linear-gradient(135deg, #d4af37, #f4e8c1);
-    color: #1a1a1a;
+    background: linear-gradient(135deg, #ffd700, #ffb700);
+    /* Richer Gold Gradient */
+    color: #000;
     border: none;
     padding: 0.6rem 1.5rem;
     border-radius: 6px;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
     margin-left: 15px;
     white-space: nowrap;
     align-self: center;
-    /* Center button vertically */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 .selection-item-btn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
+    background: linear-gradient(135deg, #ffed4a, #ffc107);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
 }
 
 /* API-sourced player visual distinction REMOVED */

@@ -407,11 +407,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (hasHistory) {
                 const expandBtn = item.querySelector('.expand-history-btn');
                 const akaDiv = item.querySelector('.selection-item-aka');
+                expandBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>'; // Chevron Down
+
                 expandBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     akaDiv.classList.toggle('collapsed');
                     akaDiv.classList.toggle('expanded');
-                    expandBtn.textContent = akaDiv.classList.contains('expanded') ? '⬆️' : '⬇️';
+                    const isExpanded = akaDiv.classList.contains('expanded');
+                    expandBtn.innerHTML = isExpanded
+                        ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>' // Chevron Up
+                        : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>'; // Chevron Down
                 });
             }
 
@@ -436,6 +441,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             list.appendChild(item);
         });
+
+        // Click outside to close
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                modal.classList.add('hidden');
+            }
+        };
 
         modal.classList.remove('hidden');
     }
