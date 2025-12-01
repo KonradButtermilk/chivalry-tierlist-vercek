@@ -286,8 +286,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const newPlayer = await apiCall('POST', {
                 name: currentNickname,
                 tier: 1,
-                playfab_id: playfabId
-                // source: 'api' removed - column doesn't exist in DB yet
+                playfab_id: playfabId,
+                source: 'api'  // Mark as from API
             });
 
             if (newPlayer) {
