@@ -341,10 +341,15 @@
 
             const weapons = [];
             Object.keys(stats).forEach(key => {
+                // Filter for weapon experience keys only
                 if (key.startsWith('experienceWeapon') && stats[key] > 0) {
+                    // Exclude keys that are Positions/Ranks (e.g. experienceWeaponBastardSwordPosition)
+                    if (key.includes('Position') || key.includes('Rank')) return;
+
                     const weaponName = key.replace('experienceWeapon', '').replace(/([A-Z])/g, ' $1').trim();
-                    // Filter out ranged
-                    if (!['Bow', 'Crossbow', 'Javelin', 'Throwing Axe'].includes(weaponName)) {
+
+                    // Filter out ranged and other non-primary weapons if desired
+                    if (!['Bow', 'Crossbow', 'Javelin', 'Throwing Axe', 'Knife', 'Dagger', 'Cudgel', 'Mallet'].includes(weaponName)) {
                         weapons.push({ name: weaponName, xp: stats[key] });
                     }
                 }

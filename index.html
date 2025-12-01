@@ -181,13 +181,6 @@
             <!-- Main Content -->
             <div id="profile-content" class="profile-content-compact hidden">
 
-                <!-- Top Weapons (No Header) -->
-                <div class="section-compact">
-                    <div id="profile-top-weapons" class="weapons-grid-compact">
-                        <!-- Populated by JS -->
-                    </div>
-                </div>
-
                 <!-- PlayFab ID -->
                 <div class="section-compact">
                     <h3 class="section-title-compact">🆔 PlayFab ID</h3>
@@ -215,12 +208,23 @@
                     </div>
                 </div>
 
+                <!-- Top Weapons (Moved to Bottom) -->
+                <div class="section-compact">
+                    <h3 class="section-title-compact">🗡️ Top Weapons</h3>
+                    <div id="profile-top-weapons" class="weapons-grid-compact">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
                 <!-- Actions -->
-                <div class="profile-actions-compact">
-                    <a id="view-chivstats" href="#" target="_blank" class="btn-primary-compact">
-                        🌐 View on ChivalryStats
+                <div class="profile-actions-compact"
+                    style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+                    <a id="view-chivstats" href="#" target="_blank" class="btn-primary-compact"
+                        style="font-size: 0.8rem; padding: 5px 10px;">
+                        🌐 ChivalryStats
                     </a>
-                    <button id="refresh-profile" class="btn-secondary-compact">
+                    <button id="refresh-profile" class="btn-secondary-compact"
+                        style="font-size: 0.8rem; padding: 5px 10px;">
                         🔄 Refresh
                     </button>
                 </div>
@@ -229,7 +233,7 @@
     </div>
 
     <script src="script_fixed.js?v=fixed15"></script>
-    <script src="profile_v2.js?v=19"></script>
+    <script src="profile_v2.js?v=20"></script>
     <script src="enhancements.js"></script>
     <script src="stats-list.js?v=4"></script>
 </body>
