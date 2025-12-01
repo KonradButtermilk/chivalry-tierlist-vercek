@@ -123,12 +123,9 @@
             };
         }
 
-        if (player && player.tier !== null && player.tier !== undefined) {
-            const tierNames = ['GOAT', 'S', 'A', 'B', 'C', 'D', 'F'];
-            document.getElementById('profile-tier-badge').textContent = tierNames[player.tier] || `Tier ${player.tier}`;
-        } else {
-            document.getElementById('profile-tier-badge').textContent = 'Unranked';
-        }
+        // Tier Badge Logic (Moved to renderProfile or handled safely)
+        // We no longer have a standalone #profile-tier-badge element in the header
+        // So we just store the tier for renderProfile to use
 
         try {
             let stats = null;
@@ -283,23 +280,37 @@
                 nameEl.appendChild(akaSpan);
             }
 
-            // Compact Stats Row (Rank | Level | Playtime)
+            // Compact Stats Row (Tier | Rank | Level | Playtime)
             const badgesContainer = document.querySelector('.profile-badges');
             if (badgesContainer) {
                 badgesContainer.innerHTML = '';
 
-                const createStatBadge = (label, value, icon) => {
+                const createStatBadge = (label, value, icon, color = '#ddd') => {
                     const badge = document.createElement('div');
                     badge.className = 'profile-tier-badge'; // Reuse existing class but modify style
                     badge.style.background = 'rgba(255,255,255,0.05)';
                     badge.style.border = '1px solid rgba(255,255,255,0.1)';
-                    badge.style.color = '#ddd';
+                    badge.style.color = color;
                     badge.style.display = 'flex';
                     badge.style.alignItems = 'center';
                     badge.style.gap = '6px';
                     badge.innerHTML = `<span style="opacity:0.7">${icon}</span> <span>${value}</span>`;
                     return badge;
                 };
+
+                // Tier Badge
+                if (localPlayer.tier !== null && localPlayer.tier !== undefined) {
+                    const tierNames = ['GOAT', 'S', 'A', 'B', 'C', 'D', 'F'];
+                    const tierName = tierNames[localPlayer.tier] || `Tier ${localPlayer.tier}`;
+                    let tierColor = '#ddd';
+                    if (tierName === 'GOAT') tierColor = '#ffd700';
+                    else if (tierName === 'S') tierColor = '#ff4081';
+                    else if (tierName === 'A') tierColor = '#4caf50';
+
+                    badgesContainer.appendChild(createStatBadge('Tier', tierName, '🎖️', tierColor));
+                } else {
+                    badgesContainer.appendChild(createStatBadge('Tier', 'Unranked', '❔'));
+                }
 
                 // Rank
                 if (globalRank !== '-') {
