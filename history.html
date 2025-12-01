@@ -26,28 +26,45 @@
                     <option value="ALL">Wszystkie</option>
                     <option value="ADD">Dodane</option>
                     <option value="UPDATE">Zaktualizowane</option>
+                    <option value="DELETE">Usunięte</option>
+                </select>
 
-                    <div id="history-container" class="history-container hidden">
-                        <table class="history-table">
-                            <thead>
-                                <tr>
-                                    <th>Data i Czas</th>
-                                    <th>Akcja</th>
-                                    <th>Gracz</th>
-                                    <th>Zmiana</th>
-                                    <th>Użytkownik</th>
-                                    <th class="admin-col">Akcje</th>
-                                </tr>
-                            </thead>
-                            <tbody id="history-body">
-                                <!-- History rows will be inserted here -->
-                            </tbody>
-                        </table>
-                    </div>
-                    </main>
+                <input type="text" id="search-player" class="search-input" placeholder="Szukaj po nazwie gracza...">
             </div>
 
-            <script src="history.js"></script>
+            <div class="toolbar-right">
+                <button id="refresh-nicknames-btn" class="btn-export"
+                    style="background-color: #4caf50; margin-right: 10px;">🔄 Odśwież Nicki</button>
+                <button id="export-csv" class="btn-export">Eksport CSV</button>
+                <button id="clear-history" class="btn-clear" style="display: none;">Wyczyść Historię</button>
+            </div>
+        </div>
+
+        <main>
+            <div id="loading" class="loading">Ładowanie historii...</div>
+            <div id="error" class="error hidden"></div>
+
+            <div id="history-container" class="history-container hidden">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Data i Czas</th>
+                            <th>Akcja</th>
+                            <th>Gracz</th>
+                            <th>Zmiana</th>
+                            <th>Użytkownik</th>
+                            <th class="admin-col">Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-body">
+                        <!-- History rows will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script src="history.js?v=2"></script>
 </body>
 
 </html>

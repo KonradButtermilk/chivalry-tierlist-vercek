@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const trashZone = document.getElementById('trash-zone');
     const loginBtn = document.getElementById('login-btn');
     const logoutBtn = document.getElementById('logout-btn');
+    const historyBtn = document.getElementById('history-btn'); // Added
     const adminControls = document.getElementById('admin-controls');
     const loginModal = document.getElementById('login-modal');
     const adminPasswordInput = document.getElementById('admin-password');
@@ -76,11 +77,13 @@ document.addEventListener('DOMContentLoaded', () => {
             logoutBtn.classList.remove('hidden');
             adminControls.classList.remove('hidden');
             trashZone.classList.remove('hidden'); // Show trash zone for admins
+            if (historyBtn) historyBtn.classList.remove('hidden'); // Show history button
         } else {
             loginBtn.classList.remove('hidden');
             logoutBtn.classList.add('hidden');
             adminControls.classList.add('hidden');
             trashZone.classList.add('hidden');
+            if (historyBtn) historyBtn.classList.add('hidden'); // Hide history button
         }
         renderAllTiers(); // Re-render to update drag handles
     }
