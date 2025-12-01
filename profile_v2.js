@@ -109,10 +109,25 @@
         document.getElementById('profile-player-name').textContent = playerName;
 
         // Get player from local data to show tier
-        const player = window.findPlayerById ? window.findPlayerById(playerId) : null;
-        if (player) {
+        let player = window.findPlayerById ? window.findPlayerById(playerId) : null;
+
+        // Fallback if not in local data (e.g. from search)
+        if (!player) {
+            player = {
+                id: playerId,
+                name: playerName,
+                tier: null, // Unknown tier
+                playfab_id: null,
+                description: null,
+                original_name: null
+            };
+        }
+
+        if (player && player.tier !== null && player.tier !== undefined) {
             const tierNames = ['GOAT', 'S', 'A', 'B', 'C', 'D', 'F'];
             document.getElementById('profile-tier-badge').textContent = tierNames[player.tier] || `Tier ${player.tier}`;
+        } else {
+            document.getElementById('profile-tier-badge').textContent = 'Unranked';
         }
 
         try {
