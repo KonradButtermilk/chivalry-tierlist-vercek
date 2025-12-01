@@ -270,17 +270,46 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // If we have an ID, fetch by ID directly
+            // If we have an ID, fetch by ID directly using the new API endpoint
             if (searchId) {
+                try {
+                    // Use the discovered API endpoint (port 8443)
+                    const response = await fetch(`https://chivalry2stats.com:8443/api/player/findByPlayFabId/${searchId}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log('[ADD] Found player by ID:', data);
+
+                        // Extract name from aliasHistory
+                        let name = 'Unknown';
+                        if (data.aliasHistory) {
+                            const aliases = data.aliasHistory.split(',').map(s => s.trim()).filter(s => s);
+                            if (aliases.length > 0) name = aliases[0];
+                        }
+
+                        const player = {
+                            playfabId: data.playfabId || searchId,
+                            name: name,
+                            aliasHistory: data.aliasHistory,
+                            source: 'api'
+                        };
+
+                        await addPlayerFromAPI(player);
+                        return;
+                    } else {
+                        console.warn('[ADD] API returned error:', response.status);
+                        // Fallback to old method if this fails
+                    }
+                } catch (err) {
+                    console.error('[ADD] Error fetching from new API:', err);
+                }
+
+                // Fallback: Try old method (internal proxy)
                 const response = await fetch(`/api/playfab-stats?playfabId=${searchId}`);
                 const data = await response.json();
 
                 if (data.success && data.data) {
-                    // Found by ID - add immediately
-                    // Ensure data has ID (sometimes it's in data.id or data.playfabId)
                     const playerData = data.data;
                     if (!playerData.playfabId) playerData.playfabId = searchId;
-
                     await addPlayerFromAPI(playerData);
                     return;
                 } else {
