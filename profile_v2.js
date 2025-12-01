@@ -178,6 +178,8 @@
 
             console.log('[PROFILE-V2] Got stats:', stats);
 
+            // Show content
+            loading.classList.add('hidden');
             content.classList.remove('hidden');
 
         } catch (err) {
@@ -395,6 +397,20 @@
             };
             nameEl.appendChild(editAkaBtn);
         }
+
+
+        // ChivalryStats link
+        const chivStatsLink = document.getElementById('view-chivstats');
+        if (chivStatsLink) {
+            if (stats.playfabId) {
+                chivStatsLink.href = `https://chivalry2stats.com/player?id=${stats.playfabId}`;
+                chivStatsLink.target = '_blank';
+                chivStatsLink.onclick = null; // Remove any previous handlers
+            } else {
+                chivStatsLink.href = '#';
+                chivStatsLink.onclick = (e) => { e.preventDefault(); alert('Brak PlayFab ID'); };
+            }
+        }
     }
 
     // ===== EDIT HELPERS =====
@@ -438,18 +454,6 @@
                         p[field] = value;
                     }
                 });
-            }
-            // ChivalryStats link
-            const chivStatsLink = document.getElementById('view-chivstats');
-            if (chivStatsLink) {
-                if (stats.playfabId) {
-                    chivStatsLink.href = `https://chivalry2stats.com/player?id=${stats.playfabId}`;
-                    chivStatsLink.target = '_blank';
-                    chivStatsLink.onclick = null; // Remove any previous handlers
-                } else {
-                    chivStatsLink.href = '#';
-                    chivStatsLink.onclick = (e) => { e.preventDefault(); alert('Brak PlayFab ID'); };
-                }
             }
         } catch (e) {
             alert('Błąd aktualizacji: ' + e.message);
