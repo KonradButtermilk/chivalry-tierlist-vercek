@@ -165,7 +165,7 @@ module.exports = async (req, res) => {
 
             try {
                 const result = await client.query(
-                    'INSERT INTO players (name, tier, description, playfab_id, source) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+                    'INSERT INTO players (name, tier, description, playfab_id, source, original_name) VALUES ($1, $2, $3, $4, $5, $1) RETURNING *',
                     [name, tier, description || '', playfab_id || null, source || 'manual']
                 );
 

@@ -403,6 +403,16 @@ document.addEventListener('DOMContentLoaded', () => {
         nameSpan.textContent = player.name;
         div.appendChild(nameSpan);
 
+        // AKA (Original Name)
+        if (player.original_name && player.original_name !== player.name) {
+            const akaSpan = document.createElement('div');
+            akaSpan.style.fontSize = '10px';
+            akaSpan.style.color = 'rgba(255,255,255,0.6)';
+            akaSpan.style.marginTop = '2px';
+            akaSpan.textContent = `(aka ${player.original_name})`;
+            div.appendChild(akaSpan);
+        }
+
         div.dataset.id = player.id;
         div.dataset.tier = player.tier;
 
