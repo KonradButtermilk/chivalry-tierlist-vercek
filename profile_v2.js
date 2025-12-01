@@ -249,40 +249,42 @@
         const isAdmin = window.isAdmin || false;
 
         if (isAdmin && idAssignSection) {
-            // Clear previous "Change" button if any
-            const existingChangeBtn = document.getElementById('change-id-btn');
-            if (existingChangeBtn) existingChangeBtn.remove();
+            idAssignSection.classList.remove('hidden');
+            idAssignSection.innerHTML = ''; // Clear existing content
+
+            const btnContainer = document.createElement('div');
+            btnContainer.style.marginTop = '10px';
+            btnContainer.style.display = 'flex';
+            btnContainer.style.gap = '10px';
 
             if (localPlayer && localPlayer.playfab_id) {
-                // HAS ID: Hide search by default, show Change button
-                idAssignSection.classList.add('hidden');
+                // HAS ID
                 unassignBtn.classList.remove('hidden');
 
-                // Add "Change" button next to ID
-                const idDisplay = document.querySelector('.id-display');
-                if (idDisplay && !document.getElementById('change-id-btn')) {
-                    const changeBtn = document.createElement('button');
-                    changeBtn.id = 'change-id-btn';
-                    changeBtn.className = 'copy-btn';
-                    changeBtn.style.marginLeft = '8px';
-                    changeBtn.innerHTML = '✏️';
-                    changeBtn.title = 'Change Assigned Player';
-                    changeBtn.onclick = () => {
-                        idAssignSection.classList.remove('hidden');
-                        const searchInput = document.getElementById('id-search-input');
-                        if (searchInput) {
-                            searchInput.focus();
-                            searchInput.placeholder = 'Search to change assigned player...';
-                        }
-                        changeBtn.classList.add('hidden'); // Hide pencil after opening
-                    };
-                    idDisplay.appendChild(changeBtn);
-                }
+                const changeBtn = document.createElement('button');
+                changeBtn.className = 'btn-secondary-compact';
+                changeBtn.innerHTML = '✏️ Zmień ID';
+                changeBtn.style.flex = '1';
+                changeBtn.onclick = () => openAssignmentModal();
+                btnContainer.appendChild(changeBtn);
+
+                // Move unassign button to container for better layout
+                unassignBtn.style.marginTop = '0';
+                unassignBtn.style.flex = '1';
+                btnContainer.appendChild(unassignBtn);
+
             } else {
-                // NO ID: Show search always
-                idAssignSection.classList.remove('hidden');
+                // NO ID
                 unassignBtn.classList.add('hidden');
+
+                const assignBtn = document.createElement('button');
+                assignBtn.className = 'btn-primary-compact';
+                assignBtn.innerHTML = '🔗 Przypisz ID';
+                assignBtn.onclick = () => openAssignmentModal();
+                btnContainer.appendChild(assignBtn);
             }
+
+            idAssignSection.appendChild(btnContainer);
         }
 
         // Nickname History
