@@ -1257,45 +1257,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Refresh Nicknames Function ---
-    async function refreshAllNicknames() {
-        console.log('[REFRESH] Starting nickname refresh');
-        if (!isAdmin) {
-            showToast('❌ Wymagane uprawnienia administratora', 'error');
-            return;
-        }
+    // Shared refresh logic
+    async function refreshPlayerNickname(player) {
+        try {
+            let newNickname = 'Unknown';
+            let stats = null;
 
-        // Get all players with PlayFab IDs
-        const allPlayers = Object.values(tierData).flat();
-        const playersWithId = allPlayers.filter(p => p.playfab_id);
-
-        console.log(`[REFRESH] Found ${playersWithId.length} players with PlayFab IDs`);
-
-        if (playersWithId.length === 0) {
-            showToast('ℹ️ Brak graczy z przypisanym ID', 'info');
-            return;
-        }
-
-        if (!confirm(`Czy na pewno chcesz odświeżyć nicki ${playersWithId.length} graczy? To może potrwać chwilę.`)) {
-            return;
-        }
-
-        showToast('🔄 Rozpoczynanie aktualizacji nicków...', 'info');
-        let updatedCount = 0;
-        let errorCount = 0;
-
-        for (const player of playersWithId) {
-            try {
-                console.log(`[REFRESH] Checking player: ${player.name} (ID: ${player.playfab_id})`);
-
-                let newNickname = 'Unknown';
-                let stats = null;
-
-                // 1. Try fetching by ID
+            // 1. Try fetching by ID
+            if (player.playfab_id) {
                 const response = await fetch(`/api/playfab-stats?playfabId=${player.playfab_id}`);
                 if (response.ok) {
                     const data = await response.json();
                     stats = data.data;
-                    console.log(`[REFRESH] Got stats for ${player.name}:`, stats);
 
                     if (Array.isArray(stats.aliases) && stats.aliases.length > 0) {
                         newNickname = stats.aliases[0];
@@ -1306,135 +1279,27 @@ document.addEventListener('DOMContentLoaded', () => {
                         newNickname = stats.LastKnownAlias;
                     }
                 }
-
-                // 2. Fallback: Search by name if ID lookup failed to provide a nickname
-                if (!newNickname || newNickname === 'Unknown') {
-                    console.warn(`[REFRESH] Could not determine nickname for ${player.name} from ID lookup. Trying fallback search...`);
-
-                    try {
-                        // Search by current name
-                        const searchRes = await fetch(`/api/playfab-stats?playerName=${encodeURIComponent(player.name)}`);
-                        const searchData = await searchRes.json();
-
-                        if (searchData.success && searchData.data && searchData.data.players) {
-                            // Find the player in search results that matches our ID
-                            const foundPlayer = searchData.data.players.find(p =>
-                                (p.playfabId === player.playfab_id) ||
-                                (p.id === player.playfab_id)
-                            );
-
-                            if (foundPlayer) {
-                                console.log(`[REFRESH] Fallback search found player:`, foundPlayer);
-                                if (foundPlayer.name) newNickname = foundPlayer.name;
-                                else if (foundPlayer.aliases && foundPlayer.aliases.length > 0) {
-                                    // Use the LAST alias in the list, assuming history is chronological (Old -> New)
-                                    newNickname = foundPlayer.aliases[foundPlayer.aliases.length - 1];
-                                }
-                            } else {
-                                console.warn(`[REFRESH] Fallback search returned results but no ID match for ${player.name}`);
-                            }
-                        }
-                    } catch (e) {
-                        console.error('[REFRESH] Fallback search failed:', e);
-                    }
-                }
-
-                // 3. Update if we found a valid new nickname
-                if (newNickname && newNickname !== 'Unknown' && newNickname !== player.name) {
-                    console.log(`[REFRESH] Updating ${player.name} -> ${newNickname}`);
-
-                    // Debug spaces
-                    if (newNickname.includes(' ')) {
-                        console.log(`[REFRESH] Nickname has spaces: "${newNickname}"`);
-                    }
-
-                    const updateRes = await fetch('/api', {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'x-admin-password': adminPassword
-                        },
-                        body: JSON.stringify({
-                            id: player.id,
-                            name: newNickname
-                        })
-                    });
-
-                    if (updateRes.ok) {
-                        console.log(`[REFRESH] ✓ Updated ${player.name} successfully`);
-                        player.name = newNickname; // Update local state
-                        updatedCount++;
-                    } else {
-                        console.error(`[REFRESH] ✗ Failed to update ${player.name}, status:`, updateRes.status);
-                        errorCount++;
-                    }
-                } else {
-                    console.log(`[REFRESH] No update needed for ${player.name} (New: ${newNickname})`);
-                }
-
-            } catch (e) {
-                console.error(`[REFRESH] Failed to update ${player.name}:`, e);
-                errorCount++;
             }
 
-            // Small delay
-            await new Promise(r => setTimeout(r, 300));
-        }
-
-        console.log(`[REFRESH] Complete! Updated: ${updatedCount}, Errors: ${errorCount}`);
-
-        if (updatedCount > 0) {
-            showToast(`✅ Zaktualizowano ${updatedCount} nicków!`, 'success');
-            renderAllTiers();
-        } else {
-            showToast('ℹ️ Wszystkie nicki są aktualne', 'info');
-        }
-
-        if (errorCount > 0) {
-            showToast(`⚠️ ${errorCount} błędów podczas aktualizacji`, 'warning');
-        }
-    }
-
-    async function refreshSingleNickname(playerId) {
-        const player = findPlayerById(playerId);
-        if (!player) return;
-
-        showToast(`🔄 Odświeżanie nicku dla ${player.name}...`, 'info');
-        console.log(`[REFRESH] Single refresh for ${player.name} (${player.playfab_id || 'No ID'})`);
-
-        try {
-            let newNickname = 'Unknown';
-
-            // 1. Try Fetch by ID if exists
-            if (player.playfab_id) {
-                const response = await fetch(`/api/playfab-stats?playfabId=${player.playfab_id}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    const stats = data.data;
-
-                    if (Array.isArray(stats.aliases) && stats.aliases.length > 0) {
-                        newNickname = stats.aliases[stats.aliases.length - 1];
-                    } else if (typeof stats.aliasHistory === 'string' && stats.aliasHistory.length > 0) {
-                        const aliases = stats.aliasHistory.split(',');
-                        newNickname = aliases[aliases.length - 1].trim();
-                    }
-                }
-            }
-
-            // 2. Fallback Search by Name (if no ID or ID fetch failed)
+            // 2. Fallback: Search by name if ID lookup failed or no ID
             if (!newNickname || newNickname === 'Unknown') {
-                console.log('[REFRESH] ID lookup skipped or failed, trying fallback search...');
+                // Search by current name
                 const searchRes = await fetch(`/api/playfab-stats?playerName=${encodeURIComponent(player.name)}`);
                 const searchData = await searchRes.json();
 
                 if (searchData.success && searchData.data && searchData.data.players) {
-                    // Try to match by ID if we have it, otherwise take the first result (risky but requested)
                     let foundPlayer = null;
+
+                    // Try to match by ID if we have it
                     if (player.playfab_id) {
-                        foundPlayer = searchData.data.players.find(p => p.playfabId === player.playfab_id || p.id === player.playfab_id);
+                        foundPlayer = searchData.data.players.find(p =>
+                            (p.playfabId === player.playfab_id) ||
+                            (p.id === player.playfab_id)
+                        );
                     }
 
                     // If not found by ID (or no ID), take the first result
+                    // This is the key change for players without ID
                     if (!foundPlayer && searchData.data.players.length > 0) {
                         foundPlayer = searchData.data.players[0];
                     }
@@ -1448,7 +1313,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // Update if needed
+            // 3. Update if we found a valid new nickname
             if (newNickname && newNickname !== 'Unknown' && newNickname !== player.name) {
                 const updateRes = await fetch('/api', {
                     method: 'PUT',
@@ -1464,19 +1329,72 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (updateRes.ok) {
                     player.name = newNickname;
-                    showToast(`✅ Zaktualizowano nick: ${newNickname}`, 'success');
-                    fetchData(); // Refresh UI
-                } else {
-                    showToast('❌ Błąd aktualizacji nicku', 'error');
+                    return { updated: true, newNickname };
                 }
-            } else {
-                if (newNickname === 'Unknown') showToast('⚠️ Nie znaleziono gracza', 'warning');
-                else showToast('ℹ️ Nick jest aktualny', 'info');
             }
 
+            return { updated: false, newNickname };
+
         } catch (e) {
-            console.error(e);
-            showToast('❌ Błąd sieci', 'error');
+            console.error(`[REFRESH] Error for ${player.name}:`, e);
+            return { updated: false, error: e };
+        }
+    }
+
+    async function refreshAllNicknames() {
+        console.log('[REFRESH] Starting nickname refresh for ALL players');
+        if (!isAdmin) {
+            showToast('❌ Wymagane uprawnienia administratora', 'error');
+            return;
+        }
+
+        const allPlayers = Object.values(tierData).flat();
+        console.log(`[REFRESH] Found ${allPlayers.length} total players`);
+
+        if (allPlayers.length === 0) {
+            showToast('ℹ️ Brak graczy na liście', 'info');
+            return;
+        }
+
+        if (!confirm(`Czy na pewno chcesz odświeżyć nicki WSZYSTKICH ${allPlayers.length} graczy? To może potrwać chwilę.`)) {
+            return;
+        }
+
+        showToast('🔄 Rozpoczynanie aktualizacji nicków...', 'info');
+        let updatedCount = 0;
+        let errorCount = 0;
+
+        for (const player of allPlayers) {
+            const result = await refreshPlayerNickname(player);
+            if (result.updated) {
+                updatedCount++;
+                console.log(`[REFRESH] Updated ${player.name} -> ${result.newNickname}`);
+            } else if (result.error) {
+                errorCount++;
+            }
+            // Small delay to be nice to API
+            await new Promise(r => setTimeout(r, 200));
+        }
+
+        showToast(`✅ Zakończono. Zaktualizowano: ${updatedCount}. Błędy: ${errorCount}`, 'success');
+        renderAllTiers();
+    }
+
+    async function refreshSingleNickname(playerId) {
+        const player = findPlayerById(playerId);
+        if (!player) return;
+
+        showToast(`🔄 Odświeżanie nicku dla ${player.name}...`, 'info');
+
+        const result = await refreshPlayerNickname(player);
+
+        if (result.updated) {
+            showToast(`✅ Zaktualizowano nick: ${result.newNickname}`, 'success');
+            fetchData(); // Refresh UI
+        } else if (result.error) {
+            showToast('❌ Błąd aktualizacji nicku', 'error');
+        } else {
+            showToast('ℹ️ Nick jest aktualny lub nie znaleziono gracza', 'info');
         }
     }
 
