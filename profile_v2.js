@@ -527,16 +527,91 @@
             return;
         }
 
+        const container = document.getElementById('id-assign-section');
+        if (!container) return;
 
-        // Refresh profile
-        openProfile(currentPlayerId, currentPlayerName);
+        // Inline confirmation UI
+        container.innerHTML = `
+            <div style="text-align: center; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);">
+                <div style="margin-bottom: 15px; font-size: 14px; color: #ddd;">
+                    Przypisać ID do gracza <b>${currentPlayerName}</b>?<br>
+                    <div style="margin-top:5px; font-size: 12px; color: #aaa;">
+                        Znaleziono: <span style="color:#fff">${playerName}</span><br>
+                        ID: <span style="font-family:monospace">${playfabId}</span>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button id="confirm-assign-btn" class="btn-primary-compact" style="background: #4caf50; border-color: #4caf50;">✅ Tak, przypisz</button>
+                    <button id="cancel-assign-btn" class="btn-secondary-compact">❌ Anuluj</button>
+                </div>
+            </div>
+        `;
 
-        // Clear search
-        document.getElementById('id-search-input').value = '';
-        hideIdSearchResults();
+        document.getElementById('cancel-assign-btn').onclick = () => {
+            // Revert to search UI
+            const currentIdText = document.getElementById('profile-playfab-id').textContent;
+            const localPlayer = {
+                id: currentPlayerId,
+                name: currentPlayerName,
+                playfab_id: (currentIdText && currentIdText !== '-' && currentIdText !== 'Not assigned') ? currentIdText : null
+            };
+            setupAssignmentUI(localPlayer, true);
+        };
 
+        document.getElementById('confirm-assign-btn').onclick = async () => {
+            const btn = document.getElementById('confirm-assign-btn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Zapisywanie...';
 
+            try {
+                const response = await fetch('/api', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-admin-password': localStorage.getItem('admin_password')
+                    },
+                    body: JSON.stringify({
+                        id: currentPlayerId,
+                        playfab_id: playfabId
+                    })
+                });
 
+                if (response.ok) {
+                    console.log('[PROFILE-V2] Assignment successful');
+
+                    // Update global data immediately so other scripts see it
+                    if (window.tierData) {
+                        Object.values(window.tierData).flat().forEach(p => {
+                            if (String(p.id) === String(currentPlayerId)) {
+                                p.playfab_id = playfabId;
+                            }
+                        });
+                    }
+
+                    // Show success message
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 10px; color: #4caf50;">
+                            <b>✅ ID Przypisane!</b>
+                        </div>
+                    `;
+
+                    // Refresh profile after short delay
+                    setTimeout(() => {
+                        openProfile(currentPlayerId, currentPlayerName);
+                    }, 1000);
+
+                } else {
+                    throw new Error('Failed to assign ID');
+                }
+            } catch (err) {
+                console.error('[PROFILE-V2] Failed to assign PlayFab ID:', err);
+                alert('Błąd: Nie udało się przypisać ID.');
+                // Revert UI
+                if (document.getElementById('cancel-assign-btn')) {
+                    document.getElementById('cancel-assign-btn').click();
+                }
+            }
+        };
     }
 
     // ===== UNASSIGN PLAYFAB ID =====
