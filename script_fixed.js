@@ -346,12 +346,13 @@ document.addEventListener('DOMContentLoaded', () => {
     async function addPlayerFromAPI(apiPlayer) {
         console.log('[ADD-API] Received player:', apiPlayer);
 
-        // Fix: Use aliases array from API response
+        // Fix: Use aliases array from API response (Take LAST one as it is the most recent)
         let displayName = 'Unknown';
         if (apiPlayer.aliases && apiPlayer.aliases.length > 0) {
-            displayName = apiPlayer.aliases[0];
+            displayName = apiPlayer.aliases[apiPlayer.aliases.length - 1];
         } else if (apiPlayer.aliasHistory) {
-            displayName = apiPlayer.aliasHistory.split(',')[0].trim();
+            const parts = apiPlayer.aliasHistory.split(',');
+            displayName = parts[parts.length - 1].trim();
         } else if (apiPlayer.LastKnownAlias) {
             displayName = apiPlayer.LastKnownAlias;
         } else {
@@ -1608,7 +1609,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const data = await response.json();
                         if (data.aliasHistory) {
                             const parts = data.aliasHistory.split(',');
-                            if (parts.length > 0) newNickname = parts[0].trim();
+                            if (parts.length > 0) newNickname = parts[parts.length - 1].trim();
                         }
                     }
                 } catch (e) {
@@ -1626,7 +1627,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (stats.displayName) newNickname = stats.displayName;
                     else if (stats.aliasHistory) {
                         const parts = stats.aliasHistory.split(',');
-                        if (parts.length > 0) newNickname = parts[0].trim();
+                        if (parts.length > 0) newNickname = parts[parts.length - 1].trim();
                     } else if (stats.LastKnownAlias) {
                         newNickname = stats.LastKnownAlias;
                     }
