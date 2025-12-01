@@ -469,9 +469,10 @@
         players.slice(0, 10).forEach(player => {
             let displayName = 'Unknown';
             if (player.aliases && player.aliases.length > 0) {
-                displayName = player.aliases[0];
+                displayName = player.aliases[player.aliases.length - 1];
             } else if (player.aliasHistory) {
-                displayName = player.aliasHistory.split(',')[0].trim();
+                const history = player.aliasHistory.split(',');
+                displayName = history[history.length - 1].trim();
             }
 
             // Backend now returns explicit 'level' field

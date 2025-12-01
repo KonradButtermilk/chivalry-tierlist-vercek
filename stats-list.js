@@ -106,7 +106,7 @@ function showPlayerList(players, searchName, playerId) {
             <div style="display: flex; flex-direction: column; gap: 12px;">
                 ${players.map(p => `
                     <div class="player-list-item" data-playfab-id="${p.playfabId}" style="background: rgba(255,255,255,0.05); padding: 14px; border-radius: 6px; cursor:pointer; border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s">
-                        <div style="font-size: 16px; font-weight: bold; color: #4caf50">${p.aliasHistory?.split(',')[0] || 'Unknown'}</div>
+                        <div style="font-size: 16px; font-weight: bold; color: #4caf50">${p.aliasHistory?.split(',').pop().trim() || 'Unknown'}</div>
                         <div style="font-size: 11px; color: #999; margin-top: 4px">ID: ${p.playfabId} · ${p.lookupCount || 0} wyszukań</div>
                         ${p.aliasHistory && p.aliasHistory.includes(',') ? `
                             <details style="margin-top: 6px">
