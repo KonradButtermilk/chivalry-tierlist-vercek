@@ -307,6 +307,46 @@
         }
     }
 
+    // ===== OPEN ASSIGNMENT MODAL (INLINE) =====
+    function openAssignmentModal() {
+        const container = document.getElementById('id-assign-section');
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="id-search-container" style="display: flex; gap: 5px; margin-top: 10px;">
+                <input type="text" id="id-search-input" placeholder="Szukaj gracza (PlayFab)..." class="search-input" style="flex: 1;">
+                <button id="id-search-btn" class="btn-primary-compact">🔍</button>
+                <button id="id-search-cancel" class="btn-secondary-compact">❌</button>
+            </div>
+            <div id="id-search-results" class="id-search-results hidden" style="margin-top: 10px; max-height: 150px; overflow-y: auto;"></div>
+        `;
+
+        // Bind events
+        document.getElementById('id-search-btn').onclick = () => {
+            const query = document.getElementById('id-search-input').value;
+            if (query) searchForIdAssignment(query);
+        };
+
+        document.getElementById('id-search-input').onkeypress = (e) => {
+            if (e.key === 'Enter') document.getElementById('id-search-btn').click();
+        };
+
+        document.getElementById('id-search-cancel').onclick = () => {
+            // Re-render assignment UI (buttons)
+            // We need to reconstruct the localPlayer object roughly
+            const localPlayer = {
+                id: currentPlayerId,
+                name: currentPlayerName,
+                playfab_id: document.getElementById('profile-playfab-id').textContent
+            };
+            if (localPlayer.playfab_id === '-') localPlayer.playfab_id = null;
+
+            setupAssignmentUI(localPlayer, true); // isAdmin is true if we are here
+        };
+
+        document.getElementById('id-search-input').focus();
+    }
+
     // ===== ID ASSIGNMENT UI LOGIC =====
     function setupAssignmentUI(localPlayer, isAdmin) {
         console.log('[PROFILE-V2] setupAssignmentUI called', { localPlayer, isAdmin });
