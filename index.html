@@ -32,6 +32,11 @@
                     <button id="backup-nicknames-btn" class="secondary-btn hidden" style="margin-left: 10px;">💾 Backup
                         AKA</button>
                 </div>
+                <!-- Staging Area for New Players -->
+                <div id="new-player-staging" class="new-player-staging hidden">
+                    <span class="staging-label">Nowi gracze (niezapisani):</span>
+                    <div id="staging-list" class="staging-list"></div>
+                </div>
             </div>
         </header>
 
@@ -144,6 +149,18 @@
                 <!-- Dynamically populated -->
             </div>
             <button id="cancel-selection" class="secondary-btn">Anuluj</button>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmation-modal" class="modal hidden">
+        <div class="modal-content confirmation-modal-content">
+            <h2 id="confirmation-title">Potwierdzenie</h2>
+            <p id="confirmation-message">Czy na pewno?</p>
+            <div class="modal-actions">
+                <button id="confirm-yes" class="btn-danger">Tak</button>
+                <button id="confirm-no" class="secondary-btn">Nie</button>
+            </div>
         </div>
     </div>
     <!-- Player Profile Modal -->
