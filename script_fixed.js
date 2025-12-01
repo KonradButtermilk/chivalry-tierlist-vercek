@@ -303,6 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showPlayerSelectionModal(players) {
+        console.log('[SELECTION] Showing modal with players:', players);
         const modal = document.getElementById('player-selection-modal');
         const list = document.getElementById('player-selection-list');
 
@@ -310,18 +311,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
         list.innerHTML = '';
 
-        players.forEach(player => {
+        players.forEach((player, idx) => {
             const item = document.createElement('div');
             item.className = 'selection-item';
 
-            // Fix: search results use 'username', not 'displayName'
-            const displayName = player.username || player.displayName || player.name || 'Unknown';
+            // Fix: Use aliases array from API response
+            let displayName = 'Unknown';
+            if (player.aliases && player.aliases.length > 0) {
+                displayName = player.aliases[0];
+            } else if (player.aliasHistory) {
+                displayName = player.aliasHistory.split(',')[0].trim();
+            } else {
+                displayName = player.username || player.displayName || player.name || 'Unknown';
+            }
+
+            console.log(`[SELECTION] Player ${idx}: ${displayName}`);
             const level = player.globalXp ? Math.floor(player.globalXp / 1000) : '?';
+            const lookupCount = player.lookupCount || 0;
 
             item.innerHTML = `
                 <div class="selection-item-info">
                     <div class="selection-item-name">${displayName}</div>
-                    <div class="selection-item-details">Level ${level} • ID: ${(player.playfabId || player.id).substring(0, 8)}...</div>
+                    <div class="selection-item-details">
+                        Level ${level} • ID: ${(player.playfabId || player.id).substring(0, 8)}...
+                        <span style="margin-left: 8px; color: #aaa;">(Wyszukań: ${lookupCount})</span>
+                    </div>
                 </div>
                 <button class="selection-item-btn">Wybierz</button>
             `;
@@ -1191,6 +1205,117 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
+    }
+
+    // --- Refresh Nicknames Function ---
+    async function refreshAllNicknames() {
+        console.log('[REFRESH] Starting nickname refresh');
+        if (!isAdmin) {
+            showToast('❌ Wymagane uprawnienia administratora', 'error');
+            return;
+        }
+
+        // Get all players with PlayFab IDs - tierData is an object {0: [], 1: [], ...}
+        const allPlayers = Object.values(tierData).flat();
+        const playersWithId = allPlayers.filter(p => p.playfab_id);
+
+        console.log(`[REFRESH] Found ${playersWithId.length} players with PlayFab IDs`);
+
+        if (playersWithId.length === 0) {
+            showToast('ℹ️ Brak graczy z przypisanym ID', 'info');
+            return;
+        }
+
+        if (!confirm(`Czy na pewno chcesz odświeżyć nicki ${playersWithId.length} graczy? To może potrwać chwilę.`)) {
+            return;
+        }
+
+        showToast('🔄 Rozpoczynanie aktualizacji nicków...', 'info');
+        let updatedCount = 0;
+        let errorCount = 0;
+
+        for (const player of playersWithId) {
+            try {
+                console.log(`[REFRESH] Checking player: ${player.name} (ID: ${player.playfab_id})`);
+
+                // Fetch latest data from API
+                const response = await fetch(`/api/playfab-stats?playfabId=${player.playfab_id}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const stats = data.data;
+                    console.log(`[REFRESH] Got stats for ${player.name}:`, stats);
+
+                    // Get latest nickname from aliases
+                    let newNickname = 'Unknown';
+                    if (stats.aliases && stats.aliases.length > 0) {
+                        newNickname = stats.aliases[0];
+                    } else if (stats.aliasHistory) {
+                        newNickname = stats.aliasHistory.split(',')[0].trim();
+                    } else if (stats.LastKnownAlias) {
+                        newNickname = stats.LastKnownAlias;
+                    }
+
+                    console.log(`[REFRESH] Current: "${player.name}", New: "${newNickname}"`);
+
+                    if (newNickname && newNickname !== 'Unknown' && newNickname !== player.name) {
+                        console.log(`[REFRESH] Updating ${player.name} -> ${newNickname}`);
+
+                        // Update in DB
+                        const updateRes = await fetch('/api', {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'x-admin-password': adminPassword
+                            },
+                            body: JSON.stringify({
+                                id: player.id,
+                                name: newNickname
+                            })
+                        });
+
+                        if (updateRes.ok) {
+                            console.log(`[REFRESH] ✓ Updated ${player.name} successfully`);
+                            player.name = newNickname; // Update local state
+                            updatedCount++;
+                        } else {
+                            console.error(`[REFRESH] ✗ Failed to update ${player.name}, status:`, updateRes.status);
+                            errorCount++;
+                        }
+                    } else {
+                        console.log(`[REFRESH] No update needed for ${player.name}`);
+                    }
+                } else {
+                    console.error(`[REFRESH] Failed to fetch stats for ${player.name}, status:`, response.status);
+                    errorCount++;
+                }
+            } catch (e) {
+                console.error(`[REFRESH] Failed to update ${player.name}:`, e);
+                errorCount++;
+            }
+
+            // Small delay to be nice to the API
+            await new Promise(r => setTimeout(r, 300));
+        }
+
+        console.log(`[REFRESH] Complete! Updated: ${updatedCount}, Errors: ${errorCount}`);
+
+        if (updatedCount > 0) {
+            showToast(`✅ Zaktualizowano ${updatedCount} nicków!`, 'success');
+            renderAllTiers(); // Re-render all tiers
+        } else {
+            showToast('ℹ️ Wszystkie nicki są aktualne', 'info');
+        }
+
+        if (errorCount > 0) {
+            showToast(`⚠️ ${errorCount} błędów podczas aktualizacji`, 'warning');
+        }
+    }
+
+    // Add listener for refresh button
+    const refreshNicknamesBtn = document.getElementById('refresh-nicknames-btn');
+    if (refreshNicknamesBtn) {
+        refreshNicknamesBtn.addEventListener('click', refreshAllNicknames);
+        console.log('[INIT] Refresh nicknames button listener added');
     }
 
     // --- Expose functions for enhancements.js and stats-list.js ---
