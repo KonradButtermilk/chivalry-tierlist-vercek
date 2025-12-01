@@ -184,7 +184,7 @@ module.exports = async (req, res) => {
 
         // --- PUT: Update Player Tier/Info ---
         if (req.method === 'PUT') {
-            const { id, tier, name, description } = body;
+            const { id, tier, name, description, playfab_id, source } = body;
             if (!id) throw new Error('Missing id');
 
             // Get current player state for history
@@ -216,6 +216,16 @@ module.exports = async (req, res) => {
                 updates.push(`description = $${idx++}`);
                 values.push(description);
                 historyDetails.push(`Description updated`);
+            }
+            if (playfab_id !== undefined && playfab_id !== currentPlayer.playfab_id) {
+                updates.push(`playfab_id = $${idx++}`);
+                values.push(playfab_id);
+                historyDetails.push(`PlayFab ID: ${currentPlayer.playfab_id || 'none'} -> ${playfab_id || 'none'}`);
+            }
+            if (source !== undefined && source !== currentPlayer.source) {
+                updates.push(`source = $${idx++}`);
+                values.push(source);
+                historyDetails.push(`Source updated: ${source}`);
             }
 
             if (updates.length === 0) {
