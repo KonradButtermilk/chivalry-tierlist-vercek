@@ -351,28 +351,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
         players.forEach((player, idx) => {
             const item = document.createElement('div');
-            item.className = 'selection-item';
+            item.className = 'selection-item compact'; // Added compact class
 
-            // Fix: Use aliases array from API response
-            let displayName = 'Unknown';
-            if (player.aliases && player.aliases.length > 0) {
-                displayName = player.aliases[0];
-            } else if (player.aliasHistory) {
-                displayName = player.aliasHistory.split(',')[0].trim();
-            } else {
-                displayName = player.username || player.displayName || player.name || 'Unknown';
+            // Determine Current Name and History
+            let currentName = 'Unknown';
+            let history = [];
+
+            // 1. Try aliases array (preferred)
+            if (player.aliases && Array.isArray(player.aliases) && player.aliases.length > 0) {
+                // Assuming last alias is current, or first? API usually returns aliases in order.
+                // Let's assume the API returns [oldest, ..., newest] or [newest, ..., oldest].
+                // Based on previous code, we took aliases[0] as display name.
+                // Let's assume aliases[0] is the most relevant/current.
+                currentName = player.aliases[0];
+                history = player.aliases.slice(1);
+            }
+            // 2. Try aliasHistory string
+            else if (player.aliasHistory) {
+                const parts = player.aliasHistory.split(',').map(s => s.trim()).filter(s => s);
+                if (parts.length > 0) {
+                    currentName = parts[0];
+                    history = parts.slice(1);
+                }
+            }
+            // 3. Fallback
+            else {
+                currentName = player.username || player.displayName || player.name || 'Unknown';
             }
 
-            console.log(`[SELECTION] Player ${idx}: ${displayName}`);
+            // If we have a separate 'name' property that differs from currentName, maybe that's the "current" one?
+            // But usually 'name' in the search result IS the matched name.
+
+            // Format history string
+            const historyStr = history.length > 0 ? history.join(', ') : 'Brak historii zmian nicku';
+
+            console.log(`[SELECTION] Player ${idx}: ${currentName} (History: ${history.length})`);
             const level = player.globalXp ? Math.floor(player.globalXp / 1000) : '?';
             const lookupCount = player.lookupCount || 0;
 
             item.innerHTML = `
                 <div class="selection-item-info">
-                    <div class="selection-item-name">${displayName}</div>
-                    <div class="selection-item-details">
-                        Level ${level} • ID: ${(player.playfabId || player.id).substring(0, 8)}...
-                        <span style="margin-left: 8px; color: #aaa;">(Wyszukań: ${lookupCount})</span>
+                    <div class="selection-item-header">
+                        <span class="selection-item-name">${currentName}</span>
+                        <span class="selection-item-level">Lvl ${level}</span>
+                    </div>
+                    <div class="selection-item-aka" title="${historyStr}">
+                        <span class="aka-label">AKA:</span> ${historyStr}
                     </div>
                 </div>
                 <button class="selection-item-btn">Wybierz</button>
