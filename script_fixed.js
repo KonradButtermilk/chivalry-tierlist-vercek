@@ -1038,216 +1038,221 @@ document.addEventListener('DOMContentLoaded', () => {
                         assignBtn.dataset.playfabId = stats.playfabId;
                         unassignBtn.classList.add('hidden');
                     }
-
-                    // Show content
-                    const content = document.getElementById('profile-content');
-                    if (content) content.classList.remove('hidden');
-
-                } catch (err) {
-                    console.error('Profile load error:', err);
-                    const error = document.getElementById('profile-error');
-                    if (error) {
-                        error.classList.remove('hidden');
-                        const msg = document.getElementById('profile-error-msg');
-                        if (msg) msg.textContent = err.message || 'Nieznany błąd';
-                    }
-                } finally {
-                    const loading = document.getElementById('profile-loading');
-                    if (loading) loading.classList.add('hidden');
+                } else {
+                    assignBtn.classList.add('hidden');
+                    unassignBtn.classList.add('hidden');
                 }
             }
 
-            // Profile modal event listeners
-            const closeProfileBtn = document.getElementById('close-profile-btn');
-            const refreshProfileBtn = document.getElementById('refresh-profile');
-            const retryProfileBtn = document.getElementById('retry-profile');
-            const profileModal = document.getElementById('player-profile-modal');
+            // Show content
+            const content = document.getElementById('profile-content');
+            if (content) content.classList.remove('hidden');
 
-            if (closeProfileBtn) {
-                closeProfileBtn.addEventListener('click', () => {
-                    profileModal.classList.add('hidden');
-                });
+        } catch (err) {
+            console.error('Profile load error:', err);
+            const error = document.getElementById('profile-error');
+            if (error) {
+                error.classList.remove('hidden');
+                const msg = document.getElementById('profile-error-msg');
+                if (msg) msg.textContent = err.message || 'Nieznany błąd';
             }
+        } finally {
+            const loading = document.getElementById('profile-loading');
+            if (loading) loading.classList.add('hidden');
+        }
+    }
 
-            if (refreshProfileBtn) {
-                refreshProfileBtn.addEventListener('click', async () => {
-                    const playerName = document.getElementById('profile-player-name').textContent;
-                    const playerId = selectedPlayerId;
-                    if (playerId && playerName) {
-                        showToast('Odświeżanie danych...', 'info');
-                        profileModal.classList.add('hidden');
-                        setTimeout(() => {
-                            openPlayerProfile(playerId, playerName);
-                        }, 100);
-                    }
-                });
-            }
+    // Profile modal event listeners
+    const closeProfileBtn = document.getElementById('close-profile-btn');
+    const refreshProfileBtn = document.getElementById('refresh-profile');
+    const retryProfileBtn = document.getElementById('retry-profile');
+    const profileModal = document.getElementById('player-profile-modal');
 
-            if (retryProfileBtn) {
-                retryProfileBtn.addEventListener('click', () => {
-                    const playerName = document.getElementById('profile-player-name').textContent;
-                    const playerId = selectedPlayerId;
-                    if (playerId && playerName) {
-                        openPlayerProfile(playerId, playerName);
-                    }
-                });
-            }
-
-            // Close on overlay click
-            if (profileModal) {
-                profileModal.addEventListener('click', (e) => {
-                    if (e.target === profileModal || e.target.classList.contains('profile-overlay')) {
-                        profileModal.classList.add('hidden');
-                    }
-                });
-            }
-
-            // --- New Features: Search & Assign ID ---
-            const profileSearchBtn = document.getElementById('profile-search-btn');
-            const profileSearchInput = document.getElementById('profile-search-input');
-            const assignIdBtn = document.getElementById('assign-id-btn');
-
-            if (profileSearchBtn && profileSearchInput) {
-                profileSearchBtn.addEventListener('click', () => {
-                    const query = profileSearchInput.value.trim();
-                    if (query) {
-                        // Search for new player, keeping the original selected ID for assignment
-                        openPlayerProfile(selectedPlayerId, query, true);
-                    }
-                });
-
-                profileSearchInput.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') profileSearchBtn.click();
-                });
-            }
-
-            if (assignIdBtn) {
-                assignIdBtn.addEventListener('click', async () => {
-                    const currentPlayFabId = assignIdBtn.dataset.playfabId;
-                    const targetPlayerId = selectedPlayerId;
-
-                    if (currentPlayFabId && targetPlayerId) {
-                        if (confirm('Czy na pewno chcesz przypisać to ID do gracza?')) {
-                            try {
-                                // Use the main API endpoint
-                                const response = await fetch('/api', {
-                                    method: 'PUT',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'x-admin-password': adminPassword
-                                    },
-                                    body: JSON.stringify({
-                                        id: targetPlayerId,
-                                        playfab_id: currentPlayFabId
-                                    })
-                                });
-
-                                if (response.ok) {
-                                    showToast('✅ ID przypisane pomyślnie!', 'success');
-                                    const player = findPlayerById(targetPlayerId);
-                                    if (player) player.playfab_id = currentPlayFabId;
-                                } else {
-                                    throw new Error('Failed to update');
-                                }
-                            } catch (err) {
-                                console.error('Assign ID error:', err);
-                                showToast('❌ Błąd przypisywania ID', 'error');
-                            }
-                        }
-                    }
-                });
-            }
-
-            // --- Phase 3: Nickname Auto-Update ---
-            async function refreshAllNicknames() {
-                if (!isAdmin) {
-                    showToast('❌ Wymagane uprawnienia administratora', 'error');
-                    return;
-                }
-
-                if (!confirm('Czy na pewno chcesz odświeżyć nicki wszystkich graczy z API? To może potrwać chwilę.')) return;
-
-                showToast('🔄 Rozpoczynanie aktualizacji nicków...', 'info');
-
-                try {
-                    // Get all players with PlayFab IDs
-                    const playersWithId = tierData.flat().filter(p => p.playfab_id);
-                    let updatedCount = 0;
-
-                    for (const player of playersWithId) {
-                        try {
-                            // Fetch latest data from API
-                            const response = await fetch(`/api/playfab-stats?playfabId=${player.playfab_id}`);
-                            if (response.ok) {
-                                const data = await response.json();
-                                const stats = data.data;
-
-                                // Get latest nickname from alias history
-                                let newNickname = 'Unknown';
-                                if (stats.aliasHistory) {
-                                    newNickname = stats.aliasHistory.split(',')[0].trim();
-                                } else if (stats.LastKnownAlias) {
-                                    newNickname = stats.LastKnownAlias;
-                                }
-
-                                if (newNickname && newNickname !== 'Unknown' && newNickname !== player.name) {
-                                    // Update in DB
-                                    const updateRes = await fetch('/api', {
-                                        method: 'PUT',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                            'x-admin-password': adminPassword
-                                        },
-                                        body: JSON.stringify({
-                                            id: player.id,
-                                            name: newNickname
-                                        })
-                                    });
-
-                                    if (updateRes.ok) {
-                                        player.name = newNickname; // Update local state
-                                        updatedCount++;
-                                    }
-                                }
-                            }
-                        } catch (e) {
-                            console.error(`Failed to update ${player.name}:`, e);
-                        }
-
-                        // Small delay to be nice to the API
-                        await new Promise(r => setTimeout(r, 500));
-                    }
-
-                    if (updatedCount > 0) {
-                        showToast(`✅ Zaktualizowano ${updatedCount} nicków!`, 'success');
-                        renderTier(0); // Re-render all tiers (simplified)
-                        renderTier(1);
-                        renderTier(2);
-                        renderTier(3);
-                        renderTier(4);
-                        renderTier(5);
-                        renderTier(6);
-                    } else {
-                        showToast('Wszystkie nicki są aktualne.', 'info');
-                    }
-
-                } catch (error) {
-                    console.error('Refresh error:', error);
-                    showToast('❌ Błąd aktualizacji nicków', 'error');
-                }
-            }
-
-            // Add Refresh Button Listener
-            const refreshNicknamesBtn = document.getElementById('refresh-nicknames-btn');
-            if (refreshNicknamesBtn) {
-                refreshNicknamesBtn.addEventListener('click', refreshAllNicknames);
-            }
-
-            // --- Expose functions for enhancements.js and stats-list.js ---
-            window.loadPlayers = fetchData;
-            window.updatePlayerTier = movePlayer;
-            window.deletePlayer = deletePlayer;
-            window.updateStatistics = updateStatistics;
-            window.findPlayerById = findPlayerById;
-            window.isAdmin = isAdmin;
+    if (closeProfileBtn) {
+        closeProfileBtn.addEventListener('click', () => {
+            profileModal.classList.add('hidden');
         });
+    }
+
+    if (refreshProfileBtn) {
+        refreshProfileBtn.addEventListener('click', async () => {
+            const playerName = document.getElementById('profile-player-name').textContent;
+            const playerId = selectedPlayerId;
+            if (playerId && playerName) {
+                showToast('Odświeżanie danych...', 'info');
+                profileModal.classList.add('hidden');
+                setTimeout(() => {
+                    openPlayerProfile(playerId, playerName);
+                }, 100);
+            }
+        });
+    }
+
+    if (retryProfileBtn) {
+        retryProfileBtn.addEventListener('click', () => {
+            const playerName = document.getElementById('profile-player-name').textContent;
+            const playerId = selectedPlayerId;
+            if (playerId && playerName) {
+                openPlayerProfile(playerId, playerName);
+            }
+        });
+    }
+
+    // Close on overlay click
+    if (profileModal) {
+        profileModal.addEventListener('click', (e) => {
+            if (e.target === profileModal || e.target.classList.contains('profile-overlay')) {
+                profileModal.classList.add('hidden');
+            }
+        });
+    }
+
+    // --- New Features: Search & Assign ID ---
+    const profileSearchBtn = document.getElementById('profile-search-btn');
+    const profileSearchInput = document.getElementById('profile-search-input');
+    const assignIdBtn = document.getElementById('assign-id-btn');
+
+    if (profileSearchBtn && profileSearchInput) {
+        profileSearchBtn.addEventListener('click', () => {
+            const query = profileSearchInput.value.trim();
+            if (query) {
+                // Search for new player, keeping the original selected ID for assignment
+                openPlayerProfile(selectedPlayerId, query, true);
+            }
+        });
+
+        profileSearchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') profileSearchBtn.click();
+        });
+    }
+
+    if (assignIdBtn) {
+        assignIdBtn.addEventListener('click', async () => {
+            const currentPlayFabId = assignIdBtn.dataset.playfabId;
+            const targetPlayerId = selectedPlayerId;
+
+            if (currentPlayFabId && targetPlayerId) {
+                if (confirm('Czy na pewno chcesz przypisać to ID do gracza?')) {
+                    try {
+                        // Use the main API endpoint
+                        const response = await fetch('/api', {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'x-admin-password': adminPassword
+                            },
+                            body: JSON.stringify({
+                                id: targetPlayerId,
+                                playfab_id: currentPlayFabId
+                            })
+                        });
+
+                        if (response.ok) {
+                            showToast('✅ ID przypisane pomyślnie!', 'success');
+                            const player = findPlayerById(targetPlayerId);
+                            if (player) player.playfab_id = currentPlayFabId;
+                        } else {
+                            throw new Error('Failed to update');
+                        }
+                    } catch (err) {
+                        console.error('Assign ID error:', err);
+                        showToast('❌ Błąd przypisywania ID', 'error');
+                    }
+                }
+            }
+        });
+    }
+
+    // --- Phase 3: Nickname Auto-Update ---
+    async function refreshAllNicknames() {
+        if (!isAdmin) {
+            showToast('❌ Wymagane uprawnienia administratora', 'error');
+            return;
+        }
+
+        if (!confirm('Czy na pewno chcesz odświeżyć nicki wszystkich graczy z API? To może potrwać chwilę.')) return;
+
+        showToast('🔄 Rozpoczynanie aktualizacji nicków...', 'info');
+
+        try {
+            // Get all players with PlayFab IDs
+            const playersWithId = tierData.flat().filter(p => p.playfab_id);
+            let updatedCount = 0;
+
+            for (const player of playersWithId) {
+                try {
+                    // Fetch latest data from API
+                    const response = await fetch(`/api/playfab-stats?playfabId=${player.playfab_id}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        const stats = data.data;
+
+                        // Get latest nickname from alias history
+                        let newNickname = 'Unknown';
+                        if (stats.aliasHistory) {
+                            newNickname = stats.aliasHistory.split(',')[0].trim();
+                        } else if (stats.LastKnownAlias) {
+                            newNickname = stats.LastKnownAlias;
+                        }
+
+                        if (newNickname && newNickname !== 'Unknown' && newNickname !== player.name) {
+                            // Update in DB
+                            const updateRes = await fetch('/api', {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'x-admin-password': adminPassword
+                                },
+                                body: JSON.stringify({
+                                    id: player.id,
+                                    name: newNickname
+                                })
+                            });
+
+                            if (updateRes.ok) {
+                                player.name = newNickname; // Update local state
+                                updatedCount++;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error(`Failed to update ${player.name}:`, e);
+                }
+
+                // Small delay to be nice to the API
+                await new Promise(r => setTimeout(r, 500));
+            }
+
+            if (updatedCount > 0) {
+                showToast(`✅ Zaktualizowano ${updatedCount} nicków!`, 'success');
+                renderTier(0); // Re-render all tiers (simplified)
+                renderTier(1);
+                renderTier(2);
+                renderTier(3);
+                renderTier(4);
+                renderTier(5);
+                renderTier(6);
+            } else {
+                showToast('Wszystkie nicki są aktualne.', 'info');
+            }
+
+        } catch (error) {
+            console.error('Refresh error:', error);
+            showToast('❌ Błąd aktualizacji nicków', 'error');
+        }
+    }
+
+    // Add Refresh Button Listener
+    const refreshNicknamesBtn = document.getElementById('refresh-nicknames-btn');
+    if (refreshNicknamesBtn) {
+        refreshNicknamesBtn.addEventListener('click', refreshAllNicknames);
+    }
+
+    // --- Expose functions for enhancements.js and stats-list.js ---
+    window.loadPlayers = fetchData;
+    window.updatePlayerTier = movePlayer;
+    window.deletePlayer = deletePlayer;
+    window.updateStatistics = updateStatistics;
+    window.findPlayerById = findPlayerById;
+    window.isAdmin = isAdmin;
+});
