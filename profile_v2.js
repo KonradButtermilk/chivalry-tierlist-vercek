@@ -15,7 +15,7 @@
 
     // Initialize on DOM ready
     document.addEventListener('DOMContentLoaded', () => {
-        console.log('[PROFILE-V2] Initializing');
+        console.log('[PROFILE-V2] Initializing v15');
 
         modal = document.getElementById('player-profile-modal');
         loading = document.getElementById('profile-loading');
@@ -207,224 +207,240 @@
 
     // ===== RENDER PROFILE =====
     function renderProfile(stats, localPlayer) {
-        console.log('[PROFILE-V2] Rendering profile');
+        console.log('[PROFILE-V2] Rendering profile', stats);
 
-        // Calculate derived stats
-        const playtime = stats.totalPlaytime || stats.playtimeex || stats.playtime || 0;
-        const playtimeHours = playtime > 0 ? Math.round(playtime / 3600) : 0;
-        const globalRank = stats.globalXpPosition || stats.global_rank || '-';
-        const globalXp = stats.globalXp || 0;
-        const level = globalXp > 0 ? Math.floor(globalXp / 1000) : '-';
+        // Safety check for localPlayer
+        if (!localPlayer) {
+            console.warn('[PROFILE-V2] localPlayer is null in renderProfile, creating fallback');
+            localPlayer = {
+                id: stats.id || 'unknown',
+                name: stats.displayName || stats.name || 'Unknown',
+                tier: null,
+                playfab_id: stats.playfabId || null
+            };
+        }
 
-        // Quick stats
-        document.getElementById('profile-rank').textContent = globalRank !== '-' ? `#${globalRank.toLocaleString()}` : '-';
-        document.getElementById('profile-level').textContent = level || '-';
-        document.getElementById('profile-hours').textContent = playtimeHours > 0 ? `${playtimeHours.toLocaleString()}h` : '-';
+        try {
+            // Calculate derived stats
+            // Prioritize playtimeex (seconds) over totalPlaytime (unknown unit/garbage)
+            const playtime = stats.playtimeex || stats.totalPlaytime || stats.playtime || 0;
+            const playtimeHours = playtime > 0 ? Math.round(playtime / 3600) : 0;
+            const globalRank = stats.globalXpPosition || stats.global_rank || '-';
+            const globalXp = stats.globalXp || 0;
+            const level = globalXp > 0 ? Math.floor(globalXp / 1000) : '-';
 
-        // Favorite class
-        const classExp = {
-            'Knight': stats.experienceKnight || 0,
-            'Vanguard': stats.experienceVanguard || 0,
-            'Footman': stats.experienceFootman || 0,
-            'Archer': stats.experienceArcher || 0
-        };
-        const maxClass = Object.entries(classExp).reduce((a, b) => a[1] > b[1] ? a : b);
-        document.getElementById('profile-class').textContent = maxClass[1] > 0 ? maxClass[0] : '-';
+            // Quick stats
+            document.getElementById('profile-rank').textContent = globalRank !== '-' ? `#${globalRank.toLocaleString()}` : '-';
+            document.getElementById('profile-level').textContent = level || '-';
+            document.getElementById('profile-hours').textContent = playtimeHours > 0 ? `${playtimeHours.toLocaleString()}h` : '-';
 
-        // Top Weapons (show level, not XP)
-        const weaponsContainer = document.getElementById('profile-top-weapons');
-        weaponsContainer.innerHTML = '';
+            // Favorite class
+            const classExp = {
+                'Knight': stats.experienceKnight || 0,
+                'Vanguard': stats.experienceVanguard || 0,
+                'Footman': stats.experienceFootman || 0,
+                'Archer': stats.experienceArcher || 0
+            };
+            const maxClass = Object.entries(classExp).reduce((a, b) => a[1] > b[1] ? a : b);
+            document.getElementById('profile-class').textContent = maxClass[1] > 0 ? maxClass[0] : '-';
 
-        const weapons = [];
-        Object.keys(stats).forEach(key => {
-            if (key.startsWith('experienceWeapon') && stats[key] > 0) {
-                const weaponName = key.replace('experienceWeapon', '').replace(/([A-Z])/g, ' $1').trim();
-                weapons.push({ name: weaponName, xp: stats[key] });
-            }
-        });
+            // Top Weapons (show level, not XP)
+            const weaponsContainer = document.getElementById('profile-top-weapons');
+            weaponsContainer.innerHTML = '';
 
-        weapons.sort((a, b) => b.xp - a.xp);
-        const topWeapons = weapons.slice(0, 6);
+            const weapons = [];
+            Object.keys(stats).forEach(key => {
+                if (key.startsWith('experienceWeapon') && stats[key] > 0) {
+                    const weaponName = key.replace('experienceWeapon', '').replace(/([A-Z])/g, ' $1').trim();
+                    weapons.push({ name: weaponName, xp: stats[key] });
+                }
+            });
 
-        topWeapons.forEach(weapon => {
-            const level = Math.floor(weapon.xp / 1000);
-            const card = document.createElement('div');
-            card.className = 'weapon-card-compact';
-            card.innerHTML = `
+            weapons.sort((a, b) => b.xp - a.xp);
+            const topWeapons = weapons.slice(0, 6);
+
+            topWeapons.forEach(weapon => {
+                const level = Math.floor(weapon.xp / 1000);
+                const card = document.createElement('div');
+                card.className = 'weapon-card-compact';
+                card.innerHTML = `
                 <span class="weapon-name-compact">${weapon.name}</span>
                 <span class="weapon-level-compact">Lvl ${level}</span>
             `;
-            weaponsContainer.appendChild(card);
-        });
-
-        if (topWeapons.length === 0) {
-            weaponsContainer.innerHTML = '<p style="color: rgba(255,255,255,0.5); font-size: 13px;">No weapon data</p>';
-        }
-
-        // PlayFab ID
-        const playfabIdEl = document.getElementById('profile-playfab-id');
-        if (stats.playfabId) {
-            playfabIdEl.textContent = stats.playfabId;
-            document.getElementById('copy-id-btn').classList.remove('hidden');
-        } else {
-            playfabIdEl.textContent = 'Not assigned';
-            document.getElementById('copy-id-btn').classList.add('hidden');
-        }
-
-        // ID Assignment UI
-        const isAdmin = window.isAdmin || !!localStorage.getItem('admin_password');
-        console.log('[PROFILE-V2] isAdmin check:', isAdmin);
-
-        // If not admin, show a login button (lock icon)
-        if (!isAdmin) {
-            console.log('[PROFILE-V2] Not admin, attempting to show lock icon');
-            const actionsContainer = document.querySelector('.profile-actions-compact');
-            if (actionsContainer) {
-                if (!document.getElementById('admin-login-btn')) {
-                    const loginBtn = document.createElement('button');
-                    loginBtn.id = 'admin-login-btn';
-                    loginBtn.className = 'btn-secondary-compact';
-                    loginBtn.style.padding = '5px 10px';
-                    loginBtn.innerHTML = '🔒';
-                    loginBtn.title = 'Admin Login';
-                    loginBtn.onclick = () => {
-                        const pass = prompt('Enter Admin Password:');
-                        if (pass) {
-                            localStorage.setItem('admin_password', pass);
-                            window.isAdmin = true;
-                            // Refresh profile to show buttons
-                            openProfile(localPlayer.id, localPlayer.name);
-                            alert('Logged in! Buttons should appear.');
-                        }
-                    };
-                    actionsContainer.appendChild(loginBtn);
-                    console.log('[PROFILE-V2] Lock icon added');
-                }
-            } else {
-                console.error('[PROFILE-V2] .profile-actions-compact not found!');
-            }
-        }
-
-        setupAssignmentUI(localPlayer, isAdmin);
-
-        // Nickname History
-        const aliasesList = document.getElementById('profile-aliases-list');
-        const nicknameCount = document.getElementById('nickname-count');
-        aliasesList.innerHTML = '';
-
-        const aliases = stats.aliases || (stats.aliasHistory ? stats.aliasHistory.split(',').map(a => a.trim()).filter(Boolean) : []);
-
-        if (aliases && aliases.length > 0) {
-            nicknameCount.textContent = `(${aliases.length})`;
-
-            aliases.forEach(alias => {
-                const chip = document.createElement('span');
-                chip.className = 'alias-chip-compact';
-                chip.textContent = alias;
-                aliasesList.appendChild(chip);
+                weaponsContainer.appendChild(card);
             });
-        } else {
-            nicknameCount.textContent = '(0)';
-            aliasesList.innerHTML = '<p style="color: rgba(255,255,255,0.5); font-size: 13px;">No nickname history</p>';
-        }
 
-        // ===== DESCRIPTION SECTION =====
-        let descContainer = document.getElementById('profile-description-container');
-        if (!descContainer) {
-            descContainer = document.createElement('div');
-            descContainer.id = 'profile-description-container';
-            descContainer.style.marginTop = '15px';
-            descContainer.style.padding = '10px';
-            descContainer.style.background = 'rgba(255,255,255,0.05)';
-            descContainer.style.borderRadius = '4px';
-            descContainer.style.border = '1px solid rgba(255,255,255,0.1)';
-            // Insert after aliases list container (which is parent of aliasesList)
-            // Actually aliasesList is inside a container, let's append to profile-content
-            // But we want it in the right place. Let's find the nickname history section.
-            const historySection = document.querySelector('.profile-section-compact:last-child'); // Assuming it's the last one
-            if (historySection) {
-                historySection.parentNode.insertBefore(descContainer, historySection.nextSibling);
-            } else {
-                document.getElementById('profile-content').appendChild(descContainer);
+            if (topWeapons.length === 0) {
+                weaponsContainer.innerHTML = '<p style="color: rgba(255,255,255,0.5); font-size: 13px;">No weapon data</p>';
             }
-        }
 
-        descContainer.innerHTML = '';
-        const descTitle = document.createElement('div');
-        descTitle.style.fontSize = '12px';
-        descTitle.style.color = '#888';
-        descTitle.style.marginBottom = '5px';
-        descTitle.style.fontWeight = 'bold';
-        descTitle.innerHTML = '📝 OPIS GRACZA';
-        descContainer.appendChild(descTitle);
-
-        const descText = document.createElement('div');
-        descText.style.fontSize = '14px';
-        descText.style.color = '#ddd';
-        descText.style.whiteSpace = 'pre-wrap'; // Preserve newlines
-        descText.textContent = localPlayer.description || 'Brak opisu.';
-        descContainer.appendChild(descText);
-
-        if (isAdmin) {
-            const editDescBtn = document.createElement('button');
-            editDescBtn.className = 'btn-secondary-compact';
-            editDescBtn.style.marginTop = '10px';
-            editDescBtn.style.fontSize = '11px';
-            editDescBtn.style.width = '100%';
-            editDescBtn.innerHTML = '✏️ Edytuj Opis';
-            editDescBtn.onclick = () => editDescription(localPlayer);
-            descContainer.appendChild(editDescBtn);
-        }
-
-        // ===== HEADER UPDATE (AKA) =====
-        const nameEl = document.getElementById('profile-player-name');
-        nameEl.innerHTML = ''; // Clear
-
-        const nameText = document.createElement('span');
-        nameText.textContent = localPlayer.name;
-        nameEl.appendChild(nameText);
-
-        if (localPlayer.original_name && localPlayer.original_name !== localPlayer.name) {
-            const akaSpan = document.createElement('span');
-            akaSpan.style.fontSize = '14px';
-            akaSpan.style.color = 'rgba(255,255,255,0.5)';
-            akaSpan.style.marginLeft = '10px';
-            akaSpan.style.fontWeight = 'normal';
-            akaSpan.textContent = `(aka ${localPlayer.original_name})`;
-            nameEl.appendChild(akaSpan);
-        }
-
-        if (isAdmin) {
-            const editAkaBtn = document.createElement('button');
-            editAkaBtn.innerHTML = '✏️';
-            editAkaBtn.style.background = 'none';
-            editAkaBtn.style.border = 'none';
-            editAkaBtn.style.cursor = 'pointer';
-            editAkaBtn.style.fontSize = '14px';
-            editAkaBtn.style.marginLeft = '8px';
-            editAkaBtn.style.opacity = '0.5';
-            editAkaBtn.title = 'Edytuj oryginalny nick';
-            editAkaBtn.onmouseover = () => editAkaBtn.style.opacity = '1';
-            editAkaBtn.onmouseout = () => editAkaBtn.style.opacity = '0.5';
-            editAkaBtn.onclick = (e) => {
-                e.stopPropagation();
-                editOriginalName(localPlayer);
-            };
-            nameEl.appendChild(editAkaBtn);
-        }
-
-
-        // ChivalryStats link
-        const chivStatsLink = document.getElementById('view-chivstats');
-        if (chivStatsLink) {
+            // PlayFab ID
+            const playfabIdEl = document.getElementById('profile-playfab-id');
             if (stats.playfabId) {
-                chivStatsLink.href = `https://chivalry2stats.com/player?id=${stats.playfabId}`;
-                chivStatsLink.target = '_blank';
-                chivStatsLink.onclick = null; // Remove any previous handlers
+                playfabIdEl.textContent = stats.playfabId;
+                document.getElementById('copy-id-btn').classList.remove('hidden');
             } else {
-                chivStatsLink.href = '#';
-                chivStatsLink.onclick = (e) => { e.preventDefault(); alert('Brak PlayFab ID'); };
+                playfabIdEl.textContent = 'Not assigned';
+                document.getElementById('copy-id-btn').classList.add('hidden');
             }
+
+            // ID Assignment UI
+            const isAdmin = window.isAdmin || !!localStorage.getItem('admin_password');
+            console.log('[PROFILE-V2] isAdmin check:', isAdmin);
+
+            // If not admin, show a login button (lock icon)
+            if (!isAdmin) {
+                console.log('[PROFILE-V2] Not admin, attempting to show lock icon');
+                const actionsContainer = document.querySelector('.profile-actions-compact');
+                if (actionsContainer) {
+                    if (!document.getElementById('admin-login-btn')) {
+                        const loginBtn = document.createElement('button');
+                        loginBtn.id = 'admin-login-btn';
+                        loginBtn.className = 'btn-secondary-compact';
+                        loginBtn.style.padding = '5px 10px';
+                        loginBtn.innerHTML = '🔒';
+                        loginBtn.title = 'Admin Login';
+                        loginBtn.onclick = () => {
+                            const pass = prompt('Enter Admin Password:');
+                            if (pass) {
+                                localStorage.setItem('admin_password', pass);
+                                window.isAdmin = true;
+                                // Refresh profile to show buttons
+                                openProfile(localPlayer.id, localPlayer.name);
+                                alert('Logged in! Buttons should appear.');
+                            }
+                        };
+                        actionsContainer.appendChild(loginBtn);
+                        console.log('[PROFILE-V2] Lock icon added');
+                    }
+                } else {
+                    console.error('[PROFILE-V2] .profile-actions-compact not found!');
+                }
+            }
+
+            setupAssignmentUI(localPlayer, isAdmin);
+
+            // Nickname History
+            const aliasesList = document.getElementById('profile-aliases-list');
+            const nicknameCount = document.getElementById('nickname-count');
+            aliasesList.innerHTML = '';
+
+            const aliases = stats.aliases || (stats.aliasHistory ? stats.aliasHistory.split(',').map(a => a.trim()).filter(Boolean) : []);
+
+            if (aliases && aliases.length > 0) {
+                nicknameCount.textContent = `(${aliases.length})`;
+
+                aliases.forEach(alias => {
+                    const chip = document.createElement('span');
+                    chip.className = 'alias-chip-compact';
+                    chip.textContent = alias;
+                    aliasesList.appendChild(chip);
+                });
+            } else {
+                nicknameCount.textContent = '(0)';
+                aliasesList.innerHTML = '<p style="color: rgba(255,255,255,0.5); font-size: 13px;">No nickname history</p>';
+            }
+
+            // ===== DESCRIPTION SECTION =====
+            let descContainer = document.getElementById('profile-description-container');
+            if (!descContainer) {
+                descContainer = document.createElement('div');
+                descContainer.id = 'profile-description-container';
+                descContainer.style.marginTop = '15px';
+                descContainer.style.padding = '10px';
+                descContainer.style.background = 'rgba(255,255,255,0.05)';
+                descContainer.style.borderRadius = '4px';
+                descContainer.style.border = '1px solid rgba(255,255,255,0.1)';
+                // Insert after aliases list container (which is parent of aliasesList)
+                // Actually aliasesList is inside a container, let's append to profile-content
+                // But we want it in the right place. Let's find the nickname history section.
+                const historySection = document.querySelector('.profile-section-compact:last-child'); // Assuming it's the last one
+                if (historySection) {
+                    historySection.parentNode.insertBefore(descContainer, historySection.nextSibling);
+                } else {
+                    document.getElementById('profile-content').appendChild(descContainer);
+                }
+            }
+
+            descContainer.innerHTML = '';
+            const descTitle = document.createElement('div');
+            descTitle.style.fontSize = '12px';
+            descTitle.style.color = '#888';
+            descTitle.style.marginBottom = '5px';
+            descTitle.style.fontWeight = 'bold';
+            descTitle.innerHTML = '📝 OPIS GRACZA';
+            descContainer.appendChild(descTitle);
+
+            const descText = document.createElement('div');
+            descText.style.fontSize = '14px';
+            descText.style.color = '#ddd';
+            descText.style.whiteSpace = 'pre-wrap'; // Preserve newlines
+            descText.textContent = localPlayer.description || 'Brak opisu.';
+            descContainer.appendChild(descText);
+
+            if (isAdmin) {
+                const editDescBtn = document.createElement('button');
+                editDescBtn.className = 'btn-secondary-compact';
+                editDescBtn.style.marginTop = '10px';
+                editDescBtn.style.fontSize = '11px';
+                editDescBtn.style.width = '100%';
+                editDescBtn.innerHTML = '✏️ Edytuj Opis';
+                editDescBtn.onclick = () => editDescription(localPlayer);
+                descContainer.appendChild(editDescBtn);
+            }
+
+            // ===== HEADER UPDATE (AKA) =====
+            const nameEl = document.getElementById('profile-player-name');
+            nameEl.innerHTML = ''; // Clear
+
+            const nameText = document.createElement('span');
+            nameText.textContent = localPlayer.name;
+            nameEl.appendChild(nameText);
+
+            if (localPlayer.original_name && localPlayer.original_name !== localPlayer.name) {
+                const akaSpan = document.createElement('span');
+                akaSpan.style.fontSize = '14px';
+                akaSpan.style.color = 'rgba(255,255,255,0.5)';
+                akaSpan.style.marginLeft = '10px';
+                akaSpan.style.fontWeight = 'normal';
+                akaSpan.textContent = `(aka ${localPlayer.original_name})`;
+                nameEl.appendChild(akaSpan);
+            }
+
+            if (isAdmin) {
+                const editAkaBtn = document.createElement('button');
+                editAkaBtn.innerHTML = '✏️';
+                editAkaBtn.style.background = 'none';
+                editAkaBtn.style.border = 'none';
+                editAkaBtn.style.cursor = 'pointer';
+                editAkaBtn.style.fontSize = '14px';
+                editAkaBtn.style.marginLeft = '8px';
+                editAkaBtn.style.opacity = '0.5';
+                editAkaBtn.title = 'Edytuj oryginalny nick';
+                editAkaBtn.onmouseover = () => editAkaBtn.style.opacity = '1';
+                editAkaBtn.onmouseout = () => editAkaBtn.style.opacity = '0.5';
+                editAkaBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    editOriginalName(localPlayer);
+                };
+                nameEl.appendChild(editAkaBtn);
+            }
+
+
+            // ChivalryStats link
+            const chivStatsLink = document.getElementById('view-chivstats');
+            if (chivStatsLink) {
+                if (stats.playfabId) {
+                    chivStatsLink.href = `https://chivalry2stats.com/player?id=${stats.playfabId}`;
+                    chivStatsLink.target = '_blank';
+                    chivStatsLink.onclick = null; // Remove any previous handlers
+                } else {
+                    chivStatsLink.href = '#';
+                    chivStatsLink.onclick = (e) => { e.preventDefault(); alert('Brak PlayFab ID'); };
+                }
+            }
+        } catch (e) {
+            console.error('[PROFILE-V2] Error in renderProfile:', e);
         }
     }
 
