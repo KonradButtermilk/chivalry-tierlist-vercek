@@ -418,7 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Tooltip
         let tooltipText = '';
-        if (player.original_name && player.original_name !== player.name) {
+        if (player.original_name) {
             tooltipText += `AKA: ${player.original_name}\n`;
         }
         if (player.description) {
