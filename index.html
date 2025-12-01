@@ -15,14 +15,20 @@
 
 <body>
     <div class="app-container">
+        <!-- Auth Controls (Top Right) -->
+        <div class="auth-controls">
+            <button id="history-btn" class="secondary-btn hidden"
+                onclick="window.location.href='history.html'">Historia</button>
+            <button id="login-btn" class="secondary-btn">Log In</button>
+            <button id="logout-btn" class="secondary-btn hidden">Log Out</button>
+        </div>
+
         <header>
-            <h1>Chivalry 2 Tier List</h1>
-            <div class="auth-controls">
-                <button id="history-btn" class="secondary-btn hidden"
-                    onclick="window.location.href='history.html'">Historia</button>
-                <button id="login-btn" class="secondary-btn">Log In</button>
-                <button id="logout-btn" class="secondary-btn hidden">Log Out</button>
-            </div>
+            <h1><a href="https://chivalry2stats.com/player" target="_blank"
+                    style="text-decoration: none; color: inherit;">Chivalry 2 Tier List</a></h1>
+            <div id="total-player-count"
+                style="color: rgba(255,255,255,0.5); margin-bottom: 15px; font-family: 'Cinzel', serif; font-size: 1.1rem; letter-spacing: 2px;">
+                Total Players: 0</div>
 
             <!-- Admin Controls -->
             <div class="controls hidden" id="admin-controls">

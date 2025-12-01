@@ -619,9 +619,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderAllTiers() {
+        let totalPlayers = 0;
         for (let i = 0; i <= 6; i++) {
             renderTier(i);
+
+            // Update individual tier count
+            const countEl = document.getElementById(`count-${i}`);
+            const count = (tierData[i] || []).length;
+            if (countEl) {
+                countEl.textContent = `(${count})`;
+            }
+            totalPlayers += count;
         }
+
+        // Update total player count
+        const totalCountEl = document.getElementById('total-player-count');
+        if (totalCountEl) {
+            totalCountEl.textContent = `Total Players: ${totalPlayers}`;
+        }
+
         // Update stats if available
         if (typeof updateStatistics === 'function') {
             updateStatistics();

@@ -202,40 +202,40 @@ button.secondary-btn:hover {
     border-radius: 10px;
 }
 
-/* Tier Header Colors */
+/* Tier Header Colors - Softened */
 .tier-0 {
-    background: linear-gradient(135deg, #a55eea, #8854d0);
-    box-shadow: 0 5px 15px rgba(165, 94, 234, 0.3);
+    background: linear-gradient(135deg, rgba(165, 94, 234, 0.8), rgba(136, 84, 208, 0.8));
+    box-shadow: 0 5px 15px rgba(165, 94, 234, 0.2);
 }
 
 .tier-1 {
-    background: linear-gradient(135deg, #ff5e57, #ff3f34);
-    box-shadow: 0 5px 15px rgba(255, 94, 87, 0.3);
+    background: linear-gradient(135deg, rgba(255, 94, 87, 0.8), rgba(255, 63, 52, 0.8));
+    box-shadow: 0 5px 15px rgba(255, 94, 87, 0.2);
 }
 
 .tier-2 {
-    background: linear-gradient(135deg, #ffa801, #ffc048);
-    box-shadow: 0 5px 15px rgba(255, 168, 1, 0.3);
+    background: linear-gradient(135deg, rgba(255, 168, 1, 0.8), rgba(255, 192, 72, 0.8));
+    box-shadow: 0 5px 15px rgba(255, 168, 1, 0.2);
 }
 
 .tier-3 {
-    background: linear-gradient(135deg, #ffd32a, #ffdd59);
-    box-shadow: 0 5px 15px rgba(255, 211, 42, 0.3);
+    background: linear-gradient(135deg, rgba(255, 211, 42, 0.8), rgba(255, 221, 89, 0.8));
+    box-shadow: 0 5px 15px rgba(255, 211, 42, 0.2);
 }
 
 .tier-4 {
-    background: linear-gradient(135deg, #0be881, #05c46b);
-    box-shadow: 0 5px 15px rgba(11, 232, 129, 0.3);
+    background: linear-gradient(135deg, rgba(11, 232, 129, 0.8), rgba(5, 196, 107, 0.8));
+    box-shadow: 0 5px 15px rgba(11, 232, 129, 0.2);
 }
 
 .tier-5 {
-    background: linear-gradient(135deg, #4bcffa, #0fbcf9);
-    box-shadow: 0 5px 15px rgba(75, 207, 250, 0.3);
+    background: linear-gradient(135deg, rgba(75, 207, 250, 0.8), rgba(15, 188, 249, 0.8));
+    box-shadow: 0 5px 15px rgba(75, 207, 250, 0.2);
 }
 
 .tier-6 {
-    background: linear-gradient(135deg, #808e9b, #d2dae2);
-    box-shadow: 0 5px 15px rgba(128, 142, 155, 0.3);
+    background: linear-gradient(135deg, rgba(128, 142, 155, 0.8), rgba(210, 218, 226, 0.8));
+    box-shadow: 0 5px 15px rgba(128, 142, 155, 0.2);
 }
 
 .tier-content {
@@ -244,27 +244,57 @@ button.secondary-btn:hover {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    min-height: 150px;
-    overflow-y: auto;
+    min-height: 200px;
+    /* Removed overflow-y: auto to allow infinite growth */
 }
 
-/* Scrollbar styling for tier content */
-.tier-content::-webkit-scrollbar {
-    width: 4px;
+/* Tier Counts - Show on Hover Only */
+.tier-count {
+    font-size: 0.8rem;
+    opacity: 0;
+    position: absolute;
+    right: 15px;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 2px 8px;
+    border-radius: 10px;
+    transition: opacity 0.2s ease;
 }
 
-.tier-content::-webkit-scrollbar-track {
-    background: transparent;
+.tier-header:hover .tier-count {
+    opacity: 1;
 }
 
-.tier-content::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 2px;
+/* Auth Controls - Top Right */
+.auth-controls {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    gap: 10px;
+    z-index: 100;
+}
+
+.secondary-btn {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    color: var(--accent-color);
+    font-size: 0.8rem;
+    padding: 8px 15px;
+    border-radius: 20px;
+    backdrop-filter: blur(5px);
+    transition: all 0.2s;
+}
+
+.secondary-btn:hover {
+    background: rgba(212, 175, 55, 0.1);
+    border-color: var(--accent-color);
+    transform: translateY(-1px);
 }
 
 /* Player Card */
 .player-card {
-    background: rgba(40, 40, 45, 0.9);
+    background: rgba(30, 30, 35, 0.95);
+    /* Slightly darker/less transparent */
     padding: 12px 15px;
     border-radius: 8px;
     cursor: grab;
@@ -277,7 +307,7 @@ button.secondary-btn:hover {
     position: relative;
     border-top: 1px solid rgba(255, 255, 255, 0.05);
     border-right: 1px solid rgba(255, 255, 255, 0.05);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.3);
 }
 
 .player-card:hover {
