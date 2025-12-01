@@ -218,9 +218,32 @@
 
         } catch (err) {
             console.error('[PROFILE-V2] Error:', err);
-            loading.classList.add('hidden');
-            error.classList.remove('hidden');
-            document.getElementById('profile-error-msg').textContent = err.message || 'Failed to load profile';
+
+            // Fix for "Player not found" - allow assigning ID
+            if (err.message === 'Player not found in API' || err.message.includes('not found')) {
+                console.log('[PROFILE-V2] Player not found, rendering basic profile for ID assignment');
+
+                const dummyStats = {
+                    id: playerId,
+                    name: playerName,
+                    displayName: playerName,
+                    playfabId: null,
+                    level: '-',
+                    globalXp: 0,
+                    playtime: 0
+                };
+
+                renderProfile(dummyStats, player);
+                loading.classList.add('hidden');
+                content.classList.remove('hidden');
+
+                // Show a toast or small message
+                if (window.showToast) window.showToast('⚠️ Gracz nie znaleziony w API. Możesz przypisać ID ręcznie.', 'warning');
+            } else {
+                loading.classList.add('hidden');
+                error.classList.remove('hidden');
+                document.getElementById('profile-error-msg').textContent = err.message || 'Failed to load profile';
+            }
         }
     }
 

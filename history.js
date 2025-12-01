@@ -77,7 +77,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const displayName = entry.alias ? `${entry.alias} (${maskedIp})` : maskedIp;
 
             // Delete icon (only for admin)
-            const deleteIcon = isAdmin ? `<span class="delete-icon" onclick="deleteEntry(${entry.id})" title="Usuń">🗑️</span>` : '';
+            const deleteIcon = isAdmin ? `<span class="delete-icon" onclick="deleteEntry(${entry.id})" title="Usuń wpis">🗑️</span>` : '';
+            // Undo icon (only for admin)
+            const undoIcon = isAdmin ? `<span class="undo-icon" onclick="undoEntry(${entry.id})" title="Cofnij zmianę" style="cursor:pointer; margin-right:8px;">↩️</span>` : '';
 
             tr.innerHTML = `
                 <td>${date}</td>
@@ -94,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span class="location-info">${location}</span>
                     </div>
                 </td>
-                <td class="admin-col">${deleteIcon}</td>
+                <td class="admin-col">${undoIcon}${deleteIcon}</td>
             `;
 
             tbodyEl.appendChild(tr);
@@ -471,4 +473,132 @@ document.addEventListener('DOMContentLoaded', () => {
             return { updated: false, error: e };
         }
     }
+    window.undoEntry = async function (id) {
+        if (!isAdmin) {
+            alert('Brak uprawnień.');
+            return;
+        }
+
+        const entry = historyData.find(e => e.id === id);
+        if (!entry) {
+            alert('Nie znaleziono wpisu.');
+            return;
+        }
+
+        if (!confirm(`Czy na pewno chcesz cofnąć tę akcję?\n\n${entry.action_type}: ${entry.details}`)) {
+            return;
+        }
+
+        try {
+            let reverseAction = null;
+            let reverseBody = {};
+
+            // Determine reverse action based on action_type and details
+            if (entry.action_type === 'UPDATE') {
+                // Expected format: "Moved from Tier X to Tier Y"
+                const moveMatch = entry.details.match(/Moved from Tier (\d+) to Tier (\d+)/);
+                if (moveMatch) {
+                    const fromTier = parseInt(moveMatch[1]);
+                    const toTier = parseInt(moveMatch[2]);
+                    // Reverse: Move from Y back to X
+                    reverseAction = 'update_tier';
+                    // We need the player ID. The history entry has 'player_id' usually, or we search by name.
+                    // The history API response should include player_id if possible, but here we might only have name.
+                    // Let's check if we can find the player by name.
+
+                    // Fetch current data to find player ID
+                    const dataRes = await fetch(`${API_URL}?type=data`);
+                    const data = await dataRes.json();
+                    let playerId = null;
+
+                    // Search for player
+                    Object.values(data).flat().forEach(p => {
+                        if (p.name === entry.player_name) playerId = p.id;
+                    });
+
+                    if (!playerId) {
+                        alert('Nie można cofnąć: Gracz nie istnieje (mógł zostać usunięty lub zmieniono mu nazwę).');
+                        return;
+                    }
+
+                    reverseBody = {
+                        id: playerId,
+                        tier: fromTier // Move back to original tier
+                    };
+                } else {
+                    alert('Nie można cofnąć: Nieznany format szczegółów aktualizacji.');
+                    return;
+                }
+            } else if (entry.action_type === 'ADD') {
+                // Reverse of ADD is DELETE
+                // Need to find player ID by name
+                const dataRes = await fetch(`${API_URL}?type=data`);
+                const data = await dataRes.json();
+                let playerId = null;
+                Object.values(data).flat().forEach(p => {
+                    if (p.name === entry.player_name) playerId = p.id;
+                });
+
+                if (!playerId) {
+                    alert('Nie można cofnąć: Gracz już nie istnieje.');
+                    return;
+                }
+
+                reverseAction = 'delete';
+                reverseBody = { id: playerId };
+            } else if (entry.action_type === 'DELETE') {
+                // Reverse of DELETE is ADD
+                // We need to know the Tier.
+                // Details: "Deleted from Tier X"
+                const tierMatch = entry.details.match(/Deleted from Tier (\d+)/);
+                if (tierMatch) {
+                    const tier = parseInt(tierMatch[1]);
+                    reverseAction = 'add';
+                    reverseBody = {
+                        name: entry.player_name,
+                        tier: tier
+                    };
+                } else {
+                    alert('Nie można cofnąć: Nieznany format szczegółów usunięcia.');
+                    return;
+                }
+            } else {
+                alert(`Cofanie akcji typu ${entry.action_type} nie jest jeszcze obsługiwane.`);
+                return;
+            }
+
+            // Execute Reverse Action
+            if (reverseAction) {
+                console.log('[UNDO] Executing reverse action:', reverseAction, reverseBody);
+
+                let method = 'POST';
+                if (reverseAction === 'update_tier') method = 'PUT';
+                if (reverseAction === 'delete') method = 'DELETE';
+
+                // For DELETE we pass ID in query or body? API usually takes ID in body for DELETE in this app (based on script_fixed.js)
+                // script_fixed.js uses DELETE with body { id: ... } for delete.
+
+                const response = await fetch(API_URL, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-admin-password': localStorage.getItem('admin_password')
+                    },
+                    body: JSON.stringify(reverseBody)
+                });
+
+                if (response.ok) {
+                    alert('Akcja została cofnięta pomyślnie.');
+                    fetchHistory(); // Refresh history
+                } else {
+                    const errData = await response.json();
+                    alert('Błąd podczas cofania: ' + (errData.error || response.statusText));
+                }
+            }
+
+        } catch (e) {
+            console.error('[UNDO] Error:', e);
+            alert('Wystąpił błąd: ' + e.message);
+        }
+    };
 });
