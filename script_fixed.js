@@ -222,14 +222,54 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function addPlayer() {
-        const name = nameInput.value.trim();
-        if (!name || !isAdmin) return;
+        const inputVal = nameInput.value.trim();
+        if (!inputVal || !isAdmin) return;
 
         showToast('🔍 Wyszukuję gracza...', 'info');
 
         try {
-            // Search ChivalryStats API
-            const response = await fetch(`/api/playfab-stats?playerName=${encodeURIComponent(name)}`);
+            let searchId = null;
+
+            // 1. Check if URL
+            if (inputVal.includes('chivalry2stats.com/player')) {
+                try {
+                    const url = new URL(inputVal.startsWith('http') ? inputVal : `https://${inputVal}`);
+                    const idParam = url.searchParams.get('id');
+                    if (idParam) {
+                        searchId = idParam;
+                        console.log('[ADD] Extracted ID from URL:', searchId);
+                    }
+                } catch (e) {
+                    console.warn('[ADD] Failed to parse URL:', e);
+                }
+            }
+            // 2. Check if direct ID (Hex string, 14-16 chars usually)
+            else if (/^[0-9A-Fa-f]{14,16}$/.test(inputVal)) {
+                searchId = inputVal;
+                console.log('[ADD] Detected direct ID:', searchId);
+            }
+
+            // If we have an ID, fetch by ID directly
+            if (searchId) {
+                const response = await fetch(`/api/playfab-stats?playfabId=${searchId}`);
+                const data = await response.json();
+
+                if (data.success && data.data) {
+                    // Found by ID - add immediately
+                    // Ensure data has ID (sometimes it's in data.id or data.playfabId)
+                    const playerData = data.data;
+                    if (!playerData.playfabId) playerData.playfabId = searchId;
+
+                    await addPlayerFromAPI(playerData);
+                    return;
+                } else {
+                    showToast('❌ Nie znaleziono gracza o podanym ID', 'error');
+                    return;
+                }
+            }
+
+            // 3. Fallback: Search by Name (Existing Logic)
+            const response = await fetch(`/api/playfab-stats?playerName=${encodeURIComponent(inputVal)}`);
             const data = await response.json();
 
             if (!data.success || !data.data || !data.data.players || data.data.players.length === 0) {
@@ -249,14 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             console.error('[Add Player] Error:', error);
-            showToast('❌ Błąd wyszukiwania - dodaję ręcznie', 'warning');
-            // Fallback to manual add
-            const newPlayer = await apiCall('POST', { name, tier: 1, source: 'manual' });
-            if (newPlayer) {
-                tierData[1].push(newPlayer);
-                renderTier(1);
-                nameInput.value = '';
-            }
+            showToast('❌ Błąd wyszukiwania', 'error');
         }
     }
 
