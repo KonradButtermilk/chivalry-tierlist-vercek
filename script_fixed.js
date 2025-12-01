@@ -1048,20 +1048,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function deletePlayer(id) {
         if (confirm('Czy na pewno chcesz usunąć tego gracza?')) {
-            findAndRemoveLocal(id);
-            renderAllTiers();
-            renderStagingArea();
+            const removedPlayer = findAndRemoveLocal(id);
 
-            // Check if it was in staging (we can check if it's still in staging? No, we just removed it)
-            // But findAndRemoveLocal returns the player.
-            // We should have captured the return value.
-            // But for now, let's assume if it was in staging, we don't need API call?
-            // Actually, `deletePlayer` is usually called from Context Menu on a card.
-            // If the card was in staging, it has `tier: staging`.
-            // But we already removed it.
+            if (removedPlayer) {
+                renderAllTiers();
+                renderStagingArea();
 
-            // Let's just try API call. If it fails (404), it's fine.
-            await apiCall('DELETE', { id });
+                // If player was in staging, no need to call API (it wasn't saved yet)
+                if (removedPlayer.tier === 'staging') {
+                    showToast('🗑️ Usunięto z poczekalni', 'info');
+                    return;
+                }
+
+                // If player has a numeric ID, delete by ID
+                if (typeof removedPlayer.id === 'number' || (typeof removedPlayer.id === 'string' && /^\d+$/.test(removedPlayer.id))) {
+                    await apiCall('DELETE', { id: removedPlayer.id });
+                } else {
+                    // If ID is non-numeric (PlayFab ID), try to delete by playfab_id
+                    console.warn('[DELETE] Deleting by PlayFab ID:', removedPlayer.id);
+                    await apiCall('DELETE', { playfab_id: removedPlayer.id });
+                }
+            }
         }
     }
 

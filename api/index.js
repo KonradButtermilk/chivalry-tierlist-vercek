@@ -278,14 +278,29 @@ module.exports = async (req, res) => {
             }
 
             // Delete player (original logic)
-            const { id: playerId } = body;
-            if (!playerId) throw new Error('Missing id');
+            const { id: playerId, playfab_id } = body;
 
-            // Get player name before deleting
-            const currentRes = await client.query('SELECT name FROM players WHERE id = $1', [playerId]);
-            const playerName = currentRes.rows[0] ? currentRes.rows[0].name : 'Unknown';
+            if (!playerId && !playfab_id) throw new Error('Missing id or playfab_id');
 
-            await client.query('DELETE FROM players WHERE id = $1', [playerId]);
+            let query = '';
+            let params = [];
+            let playerName = 'Unknown';
+
+            if (playerId) {
+                // Get player name before deleting
+                const currentRes = await client.query('SELECT name FROM players WHERE id = $1', [playerId]);
+                playerName = currentRes.rows[0] ? currentRes.rows[0].name : 'Unknown';
+                query = 'DELETE FROM players WHERE id = $1';
+                params = [playerId];
+            } else if (playfab_id) {
+                // Delete by PlayFab ID
+                const currentRes = await client.query('SELECT name FROM players WHERE playfab_id = $1', [playfab_id]);
+                playerName = currentRes.rows[0] ? currentRes.rows[0].name : 'Unknown';
+                query = 'DELETE FROM players WHERE playfab_id = $1';
+                params = [playfab_id];
+            }
+
+            await client.query(query, params);
 
             await logHistory('DELETE', playerName, 'Player deleted');
 
