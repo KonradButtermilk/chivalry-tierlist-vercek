@@ -323,6 +323,8 @@ document.addEventListener('DOMContentLoaded', () => {
             displayName = apiPlayer.aliases[0];
         } else if (apiPlayer.aliasHistory) {
             displayName = apiPlayer.aliasHistory.split(',')[0].trim();
+        } else if (apiPlayer.LastKnownAlias) {
+            displayName = apiPlayer.LastKnownAlias;
         } else {
             displayName = apiPlayer.username || apiPlayer.displayName || apiPlayer.name || 'Unknown';
         }
@@ -330,14 +332,27 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('[ADD-API] Extracted displayName:', displayName);
         const playfabId = apiPlayer.playfabId || apiPlayer.id;
 
-        // Fetch detailed stats to get current nickname
+        // Fetch detailed stats to get current nickname if we don't have a good one
+        // OR if we just want to be sure (since ID lookup might return stripped data)
         try {
             const detailResponse = await fetch(`/api/playfab-stats?playfabId=${playfabId}`);
             const detailData = await detailResponse.json();
 
-            const currentNickname = detailData.success && detailData.data
-                ? (detailData.data.displayName || displayName)
-                : displayName;
+            let currentNickname = displayName;
+
+            if (detailData.success && detailData.data) {
+                const d = detailData.data;
+                // Try to find a better name from detailed data
+                if (d.LastKnownAlias) currentNickname = d.LastKnownAlias;
+                else if (d.aliases && d.aliases.length > 0) currentNickname = d.aliases[0];
+                else if (d.displayName) currentNickname = d.displayName;
+                else if (d.name) currentNickname = d.name;
+            }
+
+            // Fallback if still Unknown
+            if (currentNickname === 'Unknown') {
+                currentNickname = `Player ${playfabId.substring(0, 6)}`;
+            }
 
             console.log('[ADD-API] Final nickname:', currentNickname);
 
