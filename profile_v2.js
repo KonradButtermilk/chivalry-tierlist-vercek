@@ -245,28 +245,35 @@
 
         // ID Assignment UI
         const isAdmin = window.isAdmin || !!localStorage.getItem('admin_password');
+        console.log('[PROFILE-V2] isAdmin check:', isAdmin);
 
         // If not admin, show a login button (lock icon)
         if (!isAdmin) {
+            console.log('[PROFILE-V2] Not admin, attempting to show lock icon');
             const actionsContainer = document.querySelector('.profile-actions-compact');
-            if (actionsContainer && !document.getElementById('admin-login-btn')) {
-                const loginBtn = document.createElement('button');
-                loginBtn.id = 'admin-login-btn';
-                loginBtn.className = 'btn-secondary-compact';
-                loginBtn.style.padding = '5px 10px';
-                loginBtn.innerHTML = '🔒';
-                loginBtn.title = 'Admin Login';
-                loginBtn.onclick = () => {
-                    const pass = prompt('Enter Admin Password:');
-                    if (pass) {
-                        localStorage.setItem('admin_password', pass);
-                        window.isAdmin = true;
-                        // Refresh profile to show buttons
-                        openProfile(localPlayer.id, localPlayer.name);
-                        alert('Logged in! Buttons should appear.');
-                    }
-                };
-                actionsContainer.appendChild(loginBtn);
+            if (actionsContainer) {
+                if (!document.getElementById('admin-login-btn')) {
+                    const loginBtn = document.createElement('button');
+                    loginBtn.id = 'admin-login-btn';
+                    loginBtn.className = 'btn-secondary-compact';
+                    loginBtn.style.padding = '5px 10px';
+                    loginBtn.innerHTML = '🔒';
+                    loginBtn.title = 'Admin Login';
+                    loginBtn.onclick = () => {
+                        const pass = prompt('Enter Admin Password:');
+                        if (pass) {
+                            localStorage.setItem('admin_password', pass);
+                            window.isAdmin = true;
+                            // Refresh profile to show buttons
+                            openProfile(localPlayer.id, localPlayer.name);
+                            alert('Logged in! Buttons should appear.');
+                        }
+                    };
+                    actionsContainer.appendChild(loginBtn);
+                    console.log('[PROFILE-V2] Lock icon added');
+                }
+            } else {
+                console.error('[PROFILE-V2] .profile-actions-compact not found!');
             }
         }
 
@@ -302,17 +309,23 @@
 
     // ===== ID ASSIGNMENT UI LOGIC =====
     function setupAssignmentUI(localPlayer, isAdmin) {
+        console.log('[PROFILE-V2] setupAssignmentUI called', { localPlayer, isAdmin });
         const idAssignSection = document.getElementById('id-assign-section');
         const unassignBtn = document.getElementById('unassign-id-btn');
 
-        if (!idAssignSection) return;
+        if (!idAssignSection) {
+            console.error('[PROFILE-V2] id-assign-section not found!');
+            return;
+        }
 
         // Show section only if admin
         if (!isAdmin) {
+            console.log('[PROFILE-V2] Hiding assignment section (not admin)');
             idAssignSection.classList.add('hidden');
             return;
         }
 
+        console.log('[PROFILE-V2] Showing assignment section');
         // Reset UI
         idAssignSection.innerHTML = ''; // Clear old inline search
         idAssignSection.classList.remove('hidden');
@@ -554,8 +567,8 @@
     document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             window.openPlayerProfile = openProfile;
-            console.log('[PROFILE-V2] Overwrote openPlayerProfile globally');
-        }, 50);
+            console.log('[PROFILE-V2] Overwrote openPlayerProfile globally (timeout 500ms)');
+        }, 500);
     });
 
 })();
