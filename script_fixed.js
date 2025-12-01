@@ -256,18 +256,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function addPlayerFromAPI(apiPlayer) {
-        // Fix: search results use 'username', not 'displayName'
-        const displayName = apiPlayer.username || apiPlayer.displayName || apiPlayer.name;
+        console.log('[ADD] Adding player from API:', apiPlayer);
+
+        // Fix: Prioritize aliases array (pre-parsed by backend), then aliasHistory, then fallbacks
+        let displayName = 'Unknown';
+        if (apiPlayer.aliases && apiPlayer.aliases.length > 0) {
+            displayName = apiPlayer.aliases[0];
+        } else if (apiPlayer.aliasHistory) {
+            displayName = apiPlayer.aliasHistory.split(',')[0].trim();
+        } else {
+            displayName = apiPlayer.username || apiPlayer.displayName || apiPlayer.name || 'Unknown';
+        }
+
         const playfabId = apiPlayer.playfabId || apiPlayer.id;
+        console.log('[ADD] Extracted - name:', displayName, 'playfabId:', playfabId);
 
         // Fetch detailed stats to get current nickname
         try {
+            console.log('[ADD] Fetching detailed stats for:', playfabId);
             const detailResponse = await fetch(`/api/playfab-stats?playfabId=${playfabId}`);
             const detailData = await detailResponse.json();
 
             const currentNickname = detailData.success && detailData.data
                 ? (detailData.data.displayName || displayName)
                 : displayName;
+
+            console.log('[ADD] Current nickname:', currentNickname);
 
             // Add player with API data
             const newPlayer = await apiCall('POST', {
@@ -278,13 +292,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (newPlayer) {
+                console.log('[ADD] Player added successfully:', newPlayer);
                 tierData[1].push(newPlayer);
                 renderTier(1);
                 nameInput.value = '';
                 showToast(`✅ Dodano: ${currentNickname}`, 'success');
             }
         } catch (error) {
-            console.error('[Add From API] Error:', error);
+            console.error('[ADD] Error adding player:', error);
             showToast('❌ Błąd dodawania gracza', 'error');
         }
     }
@@ -301,14 +316,26 @@ document.addEventListener('DOMContentLoaded', () => {
             const item = document.createElement('div');
             item.className = 'selection-item';
 
-            // Fix: search results use 'username', not 'displayName'
-            const displayName = player.username || player.displayName || player.name || 'Unknown';
+            // Fix: Prioritize aliases array, then aliasHistory, then fallbacks
+            let displayName = 'Unknown';
+            if (player.aliases && player.aliases.length > 0) {
+                displayName = player.aliases[0];
+            } else if (player.aliasHistory) {
+                displayName = player.aliasHistory.split(',')[0].trim();
+            } else {
+                displayName = player.username || player.displayName || player.name || 'Unknown';
+            }
+
             const level = player.globalXp ? Math.floor(player.globalXp / 1000) : '?';
+            const lookupCount = player.lookupCount || 0;
 
             item.innerHTML = `
                 <div class="selection-item-info">
                     <div class="selection-item-name">${displayName}</div>
-                    <div class="selection-item-details">Level ${level} • ID: ${(player.playfabId || player.id).substring(0, 8)}...</div>
+                    <div class="selection-item-details">
+                        Level ${level} • ID: ${(player.playfabId || player.id).substring(0, 8)}...
+                        <span style="margin-left: 8px; color: #aaa;">(Wyszukań: ${lookupCount})</span>
+                    </div>
                 </div>
                 <button class="selection-item-btn">Wybierz</button>
             `;
