@@ -193,6 +193,9 @@
 
             console.log('[PROFILE-V2] Got stats:', stats);
 
+            // Render profile
+            renderProfile(stats, player);
+
             // Show content
             loading.classList.add('hidden');
             content.classList.remove('hidden');
