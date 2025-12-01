@@ -256,32 +256,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function addPlayerFromAPI(apiPlayer) {
-        console.log('[ADD] Adding player from API:', apiPlayer);
-
-        // Fix: Prioritize aliases array (pre-parsed by backend), then aliasHistory, then fallbacks
-        let displayName = 'Unknown';
-        if (apiPlayer.aliases && apiPlayer.aliases.length > 0) {
-            displayName = apiPlayer.aliases[0];
-        } else if (apiPlayer.aliasHistory) {
-            displayName = apiPlayer.aliasHistory.split(',')[0].trim();
-        } else {
-            displayName = apiPlayer.username || apiPlayer.displayName || apiPlayer.name || 'Unknown';
-        }
-
+        // Fix: search results use 'username', not 'displayName'
+        const displayName = apiPlayer.username || apiPlayer.displayName || apiPlayer.name;
         const playfabId = apiPlayer.playfabId || apiPlayer.id;
-        console.log('[ADD] Extracted - name:', displayName, 'playfabId:', playfabId);
 
         // Fetch detailed stats to get current nickname
         try {
-            console.log('[ADD] Fetching detailed stats for:', playfabId);
             const detailResponse = await fetch(`/api/playfab-stats?playfabId=${playfabId}`);
             const detailData = await detailResponse.json();
 
             const currentNickname = detailData.success && detailData.data
                 ? (detailData.data.displayName || displayName)
                 : displayName;
-
-            console.log('[ADD] Current nickname:', currentNickname);
 
             // Add player with API data
             const newPlayer = await apiCall('POST', {
@@ -292,14 +278,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (newPlayer) {
-                console.log('[ADD] Player added successfully:', newPlayer);
                 tierData[1].push(newPlayer);
                 renderTier(1);
                 nameInput.value = '';
                 showToast(`✅ Dodano: ${currentNickname}`, 'success');
             }
         } catch (error) {
-            console.error('[ADD] Error adding player:', error);
+            console.error('[Add From API] Error:', error);
             showToast('❌ Błąd dodawania gracza', 'error');
         }
     }
@@ -316,26 +301,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const item = document.createElement('div');
             item.className = 'selection-item';
 
-            // Fix: Prioritize aliases array, then aliasHistory, then fallbacks
-            let displayName = 'Unknown';
-            if (player.aliases && player.aliases.length > 0) {
-                displayName = player.aliases[0];
-            } else if (player.aliasHistory) {
-                displayName = player.aliasHistory.split(',')[0].trim();
-            } else {
-                displayName = player.username || player.displayName || player.name || 'Unknown';
-            }
-
+            // Fix: search results use 'username', not 'displayName'
+            const displayName = player.username || player.displayName || player.name || 'Unknown';
             const level = player.globalXp ? Math.floor(player.globalXp / 1000) : '?';
-            const lookupCount = player.lookupCount || 0;
 
             item.innerHTML = `
                 <div class="selection-item-info">
                     <div class="selection-item-name">${displayName}</div>
-                    <div class="selection-item-details">
-                        Level ${level} • ID: ${(player.playfabId || player.id).substring(0, 8)}...
-                        <span style="margin-left: 8px; color: #aaa;">(Wyszukań: ${lookupCount})</span>
-                    </div>
+                    <div class="selection-item-details">Level ${level} • ID: ${(player.playfabId || player.id).substring(0, 8)}...</div>
                 </div>
                 <button class="selection-item-btn">Wybierz</button>
             `;
@@ -384,8 +357,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const div = document.createElement('div');
         div.className = `player-card tier-${player.tier}`;
 
-        // Visual distinction for API-sourced players (green tint)
-        if (player.source === 'api' || player.playfab_id) {
+        // Visual distinction ONLY for players added directly from API search
+        // Not for manually added players that later got playfab_id assigned
+        if (player.source === 'api') {
             div.classList.add('from-api');
         }
 
@@ -1155,6 +1129,51 @@ document.addEventListener('DOMContentLoaded', () => {
                     } catch (err) {
                         console.error('Assign ID error:', err);
                         showToast('❌ Błąd przypisywania ID', 'error');
+                    }
+                }
+            }
+        });
+    }
+
+    // Unassign button listener
+    const unassignIdBtn = document.getElementById('unassign-id-btn');
+    if (unassignIdBtn) {
+        unassignIdBtn.addEventListener('click', async () => {
+            const targetPlayerId = selectedPlayerId;
+
+            console.log('[UNASSIGN] Removing PlayFab ID from player:', targetPlayerId);
+
+            if (targetPlayerId) {
+                if (confirm('Czy na pewno chcesz usunąć przypisanie ID?')) {
+                    try {
+                        const response = await fetch('/api', {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'x-admin-password': adminPassword
+                            },
+                            body: JSON.stringify({
+                                id: targetPlayerId,
+                                playfab_id: null
+                            })
+                        });
+
+                        if (response.ok) {
+                            console.log('[UNASSIGN] Successfully removed ID');
+                            showToast('✅ Przypisanie usunięte!', 'success');
+                            const player = findPlayerById(targetPlayerId);
+                            if (player) player.playfab_id = null;
+                            renderAllTiers();
+                            // Close profile modal
+                            const profileModal = document.getElementById('player-profile-modal');
+                            if (profileModal) profileModal.classList.add('hidden');
+                        } else {
+                            console.error('[UNASSIGN] API returned error status:', response.status);
+                            throw new Error('Failed to update');
+                        }
+                    } catch (err) {
+                        console.error('[UNASSIGN] Error:', err);
+                        showToast('❌ Błąd usuwania przypisania', 'error');
                     }
                 }
             }
