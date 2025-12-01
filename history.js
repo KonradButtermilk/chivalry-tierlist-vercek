@@ -311,4 +311,164 @@ document.addEventListener('DOMContentLoaded', () => {
         const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
         return '#' + '00000'.substring(0, 6 - c.length) + c;
     }
+    // ===== REFRESH NICKNAMES LOGIC =====
+    const refreshBtn = document.getElementById('refresh-nicknames-btn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => manualRefreshNicknames());
+    }
+
+    // Auto-refresh check on load
+    checkAutoRefresh();
+
+    function checkAutoRefresh() {
+        const lastRefresh = localStorage.getItem('last_nickname_refresh');
+        const now = Date.now();
+        const twelveHours = 12 * 60 * 60 * 1000;
+
+        if (!lastRefresh || (now - parseInt(lastRefresh) > twelveHours)) {
+            console.log('[AUTO-REFRESH] Triggering automatic nickname refresh...');
+            // Auto refresh doesn't need password, it's automatic
+            refreshAllNicknames(true);
+        }
+    }
+
+    async function manualRefreshNicknames() {
+        const password = prompt('Podaj hasło do odświeżania nicków:');
+        if (password !== 'Guwno123') {
+            alert('Nieprawidłowe hasło!');
+            return;
+        }
+        refreshAllNicknames(false);
+    }
+
+    async function refreshAllNicknames(isAuto) {
+        const statusMsg = isAuto ? 'Automatyczne odświeżanie nicków...' : 'Odświeżanie nicków...';
+        console.log(`[REFRESH] Starting ${isAuto ? 'auto' : 'manual'} refresh`);
+
+        // Use a toast or alert if possible, or just console/loading indicator
+        // Since we don't have showToast here easily (unless we copy it), we'll use alert for manual
+        // and console for auto.
+        if (!isAuto) alert('Rozpoczynanie odświeżania nicków. To może potrwać chwilę. Sprawdzaj konsolę (F12) dla szczegółów.');
+
+        try {
+            // 1. Fetch all players
+            const response = await fetch(`${API_URL}?type=data`);
+            if (!response.ok) throw new Error('Failed to fetch player data');
+            const data = await response.json();
+
+            // Flatten tier data
+            const allPlayers = [];
+            Object.values(data).forEach(tier => {
+                if (Array.isArray(tier)) allPlayers.push(...tier);
+            });
+
+            console.log(`[REFRESH] Found ${allPlayers.length} players`);
+            let updatedCount = 0;
+            let errorCount = 0;
+
+            for (const player of allPlayers) {
+                const result = await refreshPlayerNickname(player);
+                if (result.updated) {
+                    updatedCount++;
+                    console.log(`[REFRESH] Updated ${player.name} -> ${result.newNickname}`);
+                } else if (result.error) {
+                    errorCount++;
+                }
+                // Delay to avoid rate limits
+                await new Promise(r => setTimeout(r, 200));
+            }
+
+            // Update timestamp
+            localStorage.setItem('last_nickname_refresh', Date.now().toString());
+
+            const msg = `Zakończono odświeżanie. Zaktualizowano: ${updatedCount}. Błędy: ${errorCount}`;
+            console.log(`[REFRESH] ${msg}`);
+            if (!isAuto) alert(msg);
+
+            // Reload history to show changes (if any updates were logged as history events)
+            fetchHistory();
+
+        } catch (e) {
+            console.error('[REFRESH] Error:', e);
+            if (!isAuto) alert('Błąd podczas odświeżania: ' + e.message);
+        }
+    }
+
+    async function refreshPlayerNickname(player) {
+        try {
+            let newNickname = 'Unknown';
+            let stats = null;
+
+            // 1. Try fetching by ID
+            if (player.playfab_id) {
+                const response = await fetch(`/api/playfab-stats?playfabId=${player.playfab_id}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    stats = data.data;
+
+                    if (Array.isArray(stats.aliases) && stats.aliases.length > 0) {
+                        newNickname = stats.aliases[0];
+                    } else if (typeof stats.aliasHistory === 'string' && stats.aliasHistory.length > 0) {
+                        const parts = stats.aliasHistory.split(',');
+                        if (parts.length > 0) newNickname = parts[0].trim();
+                    } else if (stats.LastKnownAlias) {
+                        newNickname = stats.LastKnownAlias;
+                    }
+                }
+            }
+
+            // 2. Fallback: Search by name
+            if (!newNickname || newNickname === 'Unknown') {
+                const searchRes = await fetch(`/api/playfab-stats?playerName=${encodeURIComponent(player.name)}`);
+                const searchData = await searchRes.json();
+
+                if (searchData.success && searchData.data && searchData.data.players) {
+                    let foundPlayer = null;
+                    if (player.playfab_id) {
+                        foundPlayer = searchData.data.players.find(p => p.playfabId === player.playfab_id || p.id === player.playfab_id);
+                    }
+                    if (!foundPlayer && searchData.data.players.length > 0) {
+                        foundPlayer = searchData.data.players[0];
+                    }
+
+                    if (foundPlayer) {
+                        if (foundPlayer.name) newNickname = foundPlayer.name;
+                        else if (foundPlayer.aliases && foundPlayer.aliases.length > 0) {
+                            newNickname = foundPlayer.aliases[foundPlayer.aliases.length - 1];
+                        }
+                    }
+                }
+            }
+
+            // 3. Update if needed
+            if (newNickname && newNickname !== 'Unknown' && newNickname !== player.name) {
+                // We need admin password for update. 
+                // For auto-refresh, we assume the browser has it stored.
+                // If not stored, auto-refresh will fail (401).
+                const adminPass = localStorage.getItem('admin_password');
+                if (!adminPass) return { updated: false, error: 'No admin password' };
+
+                const updateRes = await fetch(API_URL, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-admin-password': adminPass
+                    },
+                    body: JSON.stringify({
+                        id: player.id,
+                        name: newNickname
+                    })
+                });
+
+                if (updateRes.ok) {
+                    return { updated: true, newNickname };
+                }
+            }
+
+            return { updated: false, newNickname };
+
+        } catch (e) {
+            return { updated: false, error: e };
+        }
+    }
 });
