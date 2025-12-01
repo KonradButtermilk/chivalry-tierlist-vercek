@@ -454,7 +454,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } else {
             div.draggable = false;
-            div.style.cursor = 'default';
+            div.style.cursor = 'pointer';
+            div.addEventListener('click', () => {
+                window.openPlayerProfile(player.id, player.name);
+            });
         }
 
         return div;
@@ -473,7 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedPlayerId) {
             const player = findPlayerById(selectedPlayerId);
             if (player) {
-                openPlayerProfile(selectedPlayerId, player.name);
+                window.openPlayerProfile(selectedPlayerId, player.name);
                 contextMenu.classList.add('hidden');
             }
         }
@@ -735,7 +738,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // ===== ENHANCED PLAYER PROFILE =====
 
-    async function openPlayerProfile(playerId, playerName, isSearch = false) {
+    window.openPlayerProfile = async function (playerId, playerName, isSearch = false) {
         const modal = document.getElementById('player-profile-modal');
         const loading = document.getElementById('profile-loading');
         const content = document.getElementById('profile-content');
@@ -1082,7 +1085,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 showToast('Odświeżanie danych...', 'info');
                 profileModal.classList.add('hidden');
                 setTimeout(() => {
-                    openPlayerProfile(playerId, playerName);
+                    window.openPlayerProfile(playerId, playerName);
                 }, 100);
             }
         });
@@ -1093,7 +1096,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const playerName = document.getElementById('profile-player-name').textContent;
             const playerId = selectedPlayerId;
             if (playerId && playerName) {
-                openPlayerProfile(playerId, playerName);
+                window.openPlayerProfile(playerId, playerName);
             }
         });
     }
@@ -1117,7 +1120,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const query = profileSearchInput.value.trim();
             if (query) {
                 // Search for new player, keeping the original selected ID for assignment
-                openPlayerProfile(selectedPlayerId, query, true);
+                window.openPlayerProfile(selectedPlayerId, query, true);
             }
         });
 
