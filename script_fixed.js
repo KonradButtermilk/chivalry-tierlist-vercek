@@ -1264,12 +1264,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // Get latest nickname from aliases
                     let newNickname = 'Unknown';
-                    if (stats.aliases && stats.aliases.length > 0) {
+
+                    // Log raw data for debugging special characters
+                    console.log(`[REFRESH] Raw aliases for ${player.name}:`, stats.aliases);
+                    console.log(`[REFRESH] Raw aliasHistory for ${player.name}:`, stats.aliasHistory);
+
+                    if (Array.isArray(stats.aliases) && stats.aliases.length > 0) {
                         newNickname = stats.aliases[0];
-                    } else if (stats.aliasHistory) {
-                        newNickname = stats.aliasHistory.split(',')[0].trim();
+                    } else if (typeof stats.aliasHistory === 'string' && stats.aliasHistory.length > 0) {
+                        // Handle comma-separated list, taking the first item
+                        // Note: PlayFab display names shouldn't contain commas, but we trim just in case
+                        const parts = stats.aliasHistory.split(',');
+                        if (parts.length > 0) {
+                            newNickname = parts[0].trim();
+                        }
                     } else if (stats.LastKnownAlias) {
                         newNickname = stats.LastKnownAlias;
+                    }
+
+                    // Sanity check for "Unknown" or empty
+                    if (!newNickname || newNickname === 'Unknown') {
+                        console.warn(`[REFRESH] Could not determine nickname for ${player.name}`);
+                        continue;
                     }
 
                     console.log(`[REFRESH] Current: "${player.name}", New: "${newNickname}"`);

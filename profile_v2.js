@@ -251,9 +251,33 @@
         if (isAdmin && idAssignSection) {
             idAssignSection.classList.remove('hidden');
 
-            // Show/hide unassign button
+            // Clear previous "Change" button if any
+            const existingChangeBtn = document.getElementById('change-id-btn');
+            if (existingChangeBtn) existingChangeBtn.remove();
+
+            // Show/hide unassign button and add Change button
             if (localPlayer && localPlayer.playfab_id) {
                 unassignBtn.classList.remove('hidden');
+
+                // Add "Change" button next to ID
+                const idDisplay = document.querySelector('.id-display');
+                if (idDisplay && !document.getElementById('change-id-btn')) {
+                    const changeBtn = document.createElement('button');
+                    changeBtn.id = 'change-id-btn';
+                    changeBtn.className = 'copy-btn'; // Reuse style
+                    changeBtn.style.marginLeft = '8px';
+                    changeBtn.innerHTML = '✏️';
+                    changeBtn.title = 'Change Assigned Player';
+                    changeBtn.onclick = () => {
+                        const searchInput = document.getElementById('id-search-input');
+                        searchInput.focus();
+                        searchInput.placeholder = 'Search to change assigned player...';
+                        // Highlight input
+                        searchInput.style.borderColor = '#d4af37';
+                        setTimeout(() => searchInput.style.borderColor = '', 1000);
+                    };
+                    idDisplay.appendChild(changeBtn);
+                }
             } else {
                 unassignBtn.classList.add('hidden');
             }
