@@ -1,6 +1,7 @@
 // ChivalryStats backend API (discovered endpoints)
 const SEARCH_API = 'https://chivalry2stats.com:8443/api/player/usernameSearch';
 const LEADERBOARD_API = 'https://chivalry2stats.com:8443/api/player/getLeaderboardAroundPlayer';
+const ID_API = 'https://chivalry2stats.com:8443/api/player/findByPlayFabId';
 
 module.exports = async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -9,9 +10,34 @@ module.exports = async (req, res) => {
     if (req.method === 'OPTIONS') return res.status(200).end();
     if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-    const { playerName, playfabId } = req.query;
+    const { playerName, playfabId, type } = req.query;
 
-    // If PlayFab ID provided, get full detailed stats from leaderboard endpoint
+    // Direct ID Lookup (New Endpoint)
+    if (playfabId && type === 'id') {
+        try {
+            const endpoint = `${ID_API}/${encodeURIComponent(playfabId)}`;
+            console.log(`[PLAYFAB-STATS] Fetching by ID: ${endpoint}`);
+
+            const response = await fetch(endpoint, {
+                method: 'GET',
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                return res.status(200).json(data);
+            } else {
+                return res.status(response.status).json({ error: 'Not Found' });
+            }
+        } catch (error) {
+            return res.status(500).json({ error: error.message });
+        }
+    }
+
+    // If PlayFab ID provided (Detailed Stats)
     if (playfabId) {
         try {
             // Using leaderboard endpoint which returns full player stats

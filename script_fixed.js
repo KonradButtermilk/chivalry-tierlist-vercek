@@ -270,11 +270,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // If we have an ID, fetch by ID directly using the new API endpoint
+            // If we have an ID, fetch by ID directly using the new API endpoint (via Proxy)
             if (searchId) {
                 try {
-                    // Use the discovered API endpoint (port 8443)
-                    const response = await fetch(`https://chivalry2stats.com:8443/api/player/findByPlayFabId/${searchId}`);
+                    // Use local proxy to avoid CORS
+                    const response = await fetch(`/api/playfab-stats?playfabId=${searchId}&type=id`);
                     if (response.ok) {
                         const data = await response.json();
                         console.log('[ADD] Found player by ID:', data);
