@@ -243,49 +243,9 @@
             document.getElementById('copy-id-btn').classList.add('hidden');
         }
 
-        // ID Assignment section (admin only)
-        const idAssignSection = document.getElementById('id-assign-section');
-        const unassignBtn = document.getElementById('unassign-id-btn');
-        const isAdmin = window.isAdmin || false;
-
-        if (isAdmin && idAssignSection) {
-            idAssignSection.classList.remove('hidden');
-            idAssignSection.innerHTML = ''; // Clear existing content
-
-            const btnContainer = document.createElement('div');
-            btnContainer.style.marginTop = '10px';
-            btnContainer.style.display = 'flex';
-            btnContainer.style.gap = '10px';
-
-            if (localPlayer && localPlayer.playfab_id) {
-                // HAS ID
-                unassignBtn.classList.remove('hidden');
-
-                const changeBtn = document.createElement('button');
-                changeBtn.className = 'btn-secondary-compact';
-                changeBtn.innerHTML = '✏️ Zmień ID';
-                changeBtn.style.flex = '1';
-                changeBtn.onclick = () => openAssignmentModal();
-                btnContainer.appendChild(changeBtn);
-
-                // Move unassign button to container for better layout
-                unassignBtn.style.marginTop = '0';
-                unassignBtn.style.flex = '1';
-                btnContainer.appendChild(unassignBtn);
-
-            } else {
-                // NO ID
-                unassignBtn.classList.add('hidden');
-
-                const assignBtn = document.createElement('button');
-                assignBtn.className = 'btn-primary-compact';
-                assignBtn.innerHTML = '🔗 Przypisz ID';
-                assignBtn.onclick = () => openAssignmentModal();
-                btnContainer.appendChild(assignBtn);
-            }
-
-            idAssignSection.appendChild(btnContainer);
-        }
+        // ID Assignment UI
+        const isAdmin = window.isAdmin || !!localStorage.getItem('admin_password');
+        setupAssignmentUI(localPlayer, isAdmin);
 
         // Nickname History
         const aliasesList = document.getElementById('profile-aliases-list');
@@ -313,6 +273,58 @@
         if (chivStatsLink && stats.playfabId) {
             chivStatsLink.href = `https://chivalry2stats.com/player?id=${stats.playfabId}`;
         }
+    }
+
+    // ===== ID ASSIGNMENT UI LOGIC =====
+    function setupAssignmentUI(localPlayer, isAdmin) {
+        const idAssignSection = document.getElementById('id-assign-section');
+        const unassignBtn = document.getElementById('unassign-id-btn');
+
+        if (!idAssignSection) return;
+
+        // Show section only if admin
+        if (!isAdmin) {
+            idAssignSection.classList.add('hidden');
+            return;
+        }
+
+        // Reset UI
+        idAssignSection.innerHTML = ''; // Clear old inline search
+        idAssignSection.classList.remove('hidden');
+
+        const btnContainer = document.createElement('div');
+        btnContainer.style.marginTop = '10px';
+        btnContainer.style.display = 'flex';
+        btnContainer.style.gap = '10px';
+
+        if (localPlayer && localPlayer.playfab_id) {
+            // HAS ID
+            unassignBtn.classList.remove('hidden');
+
+            const changeBtn = document.createElement('button');
+            changeBtn.className = 'btn-secondary-compact';
+            changeBtn.innerHTML = '✏️ Zmień ID';
+            changeBtn.style.flex = '1';
+            changeBtn.onclick = () => openAssignmentModal();
+            btnContainer.appendChild(changeBtn);
+
+            // Move unassign button to container
+            unassignBtn.style.marginTop = '0';
+            unassignBtn.style.flex = '1';
+            btnContainer.appendChild(unassignBtn);
+
+        } else {
+            // NO ID
+            unassignBtn.classList.add('hidden');
+
+            const assignBtn = document.createElement('button');
+            assignBtn.className = 'btn-primary-compact';
+            assignBtn.innerHTML = '🔗 Przypisz ID';
+            assignBtn.onclick = () => openAssignmentModal();
+            btnContainer.appendChild(assignBtn);
+        }
+
+        idAssignSection.appendChild(btnContainer);
     }
 
     // ===== COPY PLAYFAB ID =====
