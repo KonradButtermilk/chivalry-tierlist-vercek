@@ -236,23 +236,38 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             let searchId = null;
 
-            // 1. Check if URL
+            // 1. Check if URL (Query or Path based)
             if (inputVal.includes('chivalry2stats.com/player')) {
                 try {
                     const url = new URL(inputVal.startsWith('http') ? inputVal : `https://${inputVal}`);
+
+                    // Check query param ?id=...
                     const idParam = url.searchParams.get('id');
                     if (idParam) {
                         searchId = idParam;
-                        console.log('[ADD] Extracted ID from URL:', searchId);
+                        console.log('[ADD] Extracted ID from URL Query:', searchId);
+                    } else {
+                        // Check path /player/ID
+                        const parts = url.pathname.split('/');
+                        const lastPart = parts[parts.length - 1];
+                        if (/^[0-9A-Fa-f]{14,16}$/.test(lastPart)) {
+                            searchId = lastPart;
+                            console.log('[ADD] Extracted ID from URL Path:', searchId);
+                        }
                     }
                 } catch (e) {
                     console.warn('[ADD] Failed to parse URL:', e);
                 }
             }
             // 2. Check if direct ID (Hex string, 14-16 chars usually)
-            else if (/^[0-9A-Fa-f]{14,16}$/.test(inputVal)) {
-                searchId = inputVal;
-                console.log('[ADD] Detected direct ID:', searchId);
+            else {
+                const cleanInput = inputVal.trim();
+                if (/^[0-9A-Fa-f]{14,16}$/.test(cleanInput)) {
+                    searchId = cleanInput;
+                    console.log('[ADD] Detected direct ID:', searchId);
+                } else {
+                    console.log('[ADD] Input is not a valid ID format:', cleanInput);
+                }
             }
 
             // If we have an ID, fetch by ID directly
@@ -892,12 +907,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (sourceTier === 'staging') {
                         // Create new player from staging
                         console.log('[DROP] Creating player from staging:', player);
-                        await apiCall('POST', {
+                        const response = await apiCall('POST', {
                             name: player.name,
                             tier: targetTier,
                             playfab_id: player.playfab_id,
                             original_name: player.original_name
                         });
+
+                        if (response && response.success && response.data && response.data.id) {
+                            console.log('[DROP] Player created, updating local ID:', player.id, '->', response.data.id);
+                            player.id = response.data.id;
+                        }
                     } else {
                         // Move existing player
                         await apiCall('PUT', { id: player.id, tier: targetTier });
@@ -906,6 +926,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Clear selection after move
                 selectedPlayerIds.clear();
+
+                // Re-render to ensure DOM has correct IDs (from API response)
+                renderAllTiers();
             }
         });
     });
