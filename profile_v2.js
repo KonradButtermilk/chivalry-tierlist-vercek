@@ -333,13 +333,12 @@
 
         document.getElementById('id-search-cancel').onclick = () => {
             // Re-render assignment UI (buttons)
-            // We need to reconstruct the localPlayer object roughly
+            const currentIdText = document.getElementById('profile-playfab-id').textContent;
             const localPlayer = {
                 id: currentPlayerId,
                 name: currentPlayerName,
-                playfab_id: document.getElementById('profile-playfab-id').textContent
+                playfab_id: (currentIdText && currentIdText !== '-' && currentIdText !== 'Not assigned') ? currentIdText : null
             };
-            if (localPlayer.playfab_id === '-') localPlayer.playfab_id = null;
 
             setupAssignmentUI(localPlayer, true); // isAdmin is true if we are here
         };
@@ -354,18 +353,16 @@
         const unassignBtn = document.getElementById('unassign-id-btn');
 
         if (!idAssignSection) {
-            console.error('[PROFILE-V2] id-assign-section not found!');
+            console.warn('[PROFILE-V2] id-assign-section not found!');
             return;
         }
 
         // Show section only if admin
         if (!isAdmin) {
-            console.log('[PROFILE-V2] Hiding assignment section (not admin)');
             idAssignSection.classList.add('hidden');
             return;
         }
 
-        console.log('[PROFILE-V2] Showing assignment section');
         // Reset UI
         idAssignSection.innerHTML = ''; // Clear old inline search
         idAssignSection.classList.remove('hidden');
@@ -377,7 +374,7 @@
 
         if (localPlayer && localPlayer.playfab_id) {
             // HAS ID
-            unassignBtn.classList.remove('hidden');
+            if (unassignBtn) unassignBtn.classList.remove('hidden');
 
             const changeBtn = document.createElement('button');
             changeBtn.className = 'btn-secondary-compact';
@@ -386,14 +383,27 @@
             changeBtn.onclick = () => openAssignmentModal();
             btnContainer.appendChild(changeBtn);
 
-            // Move unassign button to container
-            unassignBtn.style.marginTop = '0';
-            unassignBtn.style.flex = '1';
-            btnContainer.appendChild(unassignBtn);
+            // Move unassign button to container if it exists
+            if (unassignBtn) {
+                unassignBtn.style.marginTop = '0';
+                unassignBtn.style.flex = '1';
+                // We need to clone it to move it, or just append it (it will move)
+                // But unassignBtn is outside the container in HTML structure usually
+                // Let's just create a new one to be safe and consistent
+                const newUnassignBtn = document.createElement('button');
+                newUnassignBtn.className = 'btn-danger-compact';
+                newUnassignBtn.innerHTML = '🗑️ Usuń ID';
+                newUnassignBtn.style.flex = '1';
+                newUnassignBtn.onclick = unassignPlayFabId;
+                btnContainer.appendChild(newUnassignBtn);
+
+                // Hide the original one to avoid duplicates
+                unassignBtn.classList.add('hidden');
+            }
 
         } else {
             // NO ID
-            unassignBtn.classList.add('hidden');
+            if (unassignBtn) unassignBtn.classList.add('hidden');
 
             const assignBtn = document.createElement('button');
             assignBtn.className = 'btn-primary-compact';
@@ -410,7 +420,7 @@
         const idText = document.getElementById('profile-playfab-id').textContent;
         const copyBtn = document.getElementById('copy-id-btn');
 
-        if (idText && idText !== 'Not assigned') {
+        if (idText && idText !== 'Not assigned' && idText !== '-') {
             navigator.clipboard.writeText(idText).then(() => {
                 console.log('[PROFILE-V2] ID copied:', idText);
                 copyBtn.textContent = '✓';
@@ -430,6 +440,11 @@
     // ===== SEARCH FOR ID ASSIGNMENT =====
     async function searchForIdAssignment(query) {
         console.log('[PROFILE-V2] Searching for ID assignment:', query);
+        const resultsContainer = document.getElementById('id-search-results');
+        if (resultsContainer) {
+            resultsContainer.innerHTML = '<div style="padding:10px; text-align:center; color:#888;">Szukanie...</div>';
+            resultsContainer.classList.remove('hidden');
+        }
 
         try {
             const response = await fetch(`/api/playfab-stats?playerName=${encodeURIComponent(query)}`);
@@ -438,11 +453,11 @@
             if (data.success && data.data && data.data.players && data.data.players.length > 0) {
                 showIdSearchResults(data.data.players);
             } else {
-                hideIdSearchResults();
+                if (resultsContainer) resultsContainer.innerHTML = '<div style="padding:10px; text-align:center; color:#888;">Brak wyników</div>';
             }
         } catch (err) {
             console.error('[PROFILE-V2] Search error:', err);
-            hideIdSearchResults();
+            if (resultsContainer) resultsContainer.innerHTML = '<div style="padding:10px; text-align:center; color:#f44336;">Błąd wyszukiwania</div>';
         }
     }
 
@@ -451,7 +466,7 @@
         resultsContainer.innerHTML = '';
         resultsContainer.classList.remove('hidden');
 
-        players.slice(0, 5).forEach(player => {
+        players.slice(0, 10).forEach(player => {
             let displayName = 'Unknown';
             if (player.aliases && player.aliases.length > 0) {
                 displayName = player.aliases[0];
@@ -459,14 +474,31 @@
                 displayName = player.aliasHistory.split(',')[0].trim();
             }
 
-            const level = player.globalXp ? Math.floor(player.globalXp / 1000) : '?';
+            // Backend now returns explicit 'level' field
+            const level = player.level || (player.globalXp ? Math.floor(player.globalXp / 1000) : '?');
             const playfabId = player.playfabId || player.id;
 
             const item = document.createElement('div');
             item.className = 'id-search-result-item';
+            item.style.padding = '8px';
+            item.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
+            item.style.cursor = 'pointer';
+            item.style.display = 'flex';
+            item.style.justifyContent = 'space-between';
+            item.style.alignItems = 'center';
+
+            // Hover effect
+            item.onmouseover = () => item.style.background = 'rgba(255,255,255,0.05)';
+            item.onmouseout = () => item.style.background = 'transparent';
+
             item.innerHTML = `
-                <div>${displayName}</div>
-                <div style="font-size: 11px; color: rgba(255,255,255,0.5);">Level ${level} • ${playfabId.substring(0, 8)}...</div>
+                <div>
+                    <div style="font-weight:bold; color:#fff;">${displayName}</div>
+                    <div style="font-size: 11px; color: rgba(255,255,255,0.5);">${playfabId}</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size: 12px; color: #ffd700;">Lvl ${level}</div>
+                </div>
             `;
 
             item.addEventListener('click', () => {
@@ -486,7 +518,7 @@
     }
 
     // ===== ASSIGN PLAYFAB ID =====
-    async function assignPlayFabId(playfabId, playerName) {
+    function assignPlayFabId(playfabId, playerName) {
         console.log('[PROFILE-V2] Assigning ID:', playfabId, 'to player:', currentPlayerId);
 
         if (!currentPlayerId) {
@@ -494,55 +526,16 @@
             return;
         }
 
-        if (!confirm(`Assign ID to this player?\nPlayer: ${playerName}\nID: ${playfabId}`)) {
-            return;
-        }
 
-        try {
-            const adminPassword = localStorage.getItem('admin_password');
-            const response = await fetch('/api', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-admin-password': adminPassword
-                },
-                body: JSON.stringify({
-                    id: currentPlayerId,
-                    playfab_id: playfabId
-                })
-            });
+        // Refresh profile
+        openProfile(currentPlayerId, currentPlayerName);
 
-            const data = await response.json();
-            console.log('[PROFILE-V2] Assign response:', data);
+        // Clear search
+        document.getElementById('id-search-input').value = '';
+        hideIdSearchResults();
 
-            if (response.ok) {
-                console.log('[PROFILE-V2] ID assigned successfully');
 
-                // Update local player data
-                const player = window.findPlayerById ? window.findPlayerById(currentPlayerId) : null;
-                if (player) {
-                    player.playfab_id = playfabId;
-                }
 
-                // Show toast
-                if (window.showToast) {
-                    window.showToast('✅ ID assigned successfully!', 'success');
-                }
-
-                // Refresh profile
-                openProfile(currentPlayerId, currentPlayerName);
-
-                // Clear search
-                document.getElementById('id-search-input').value = '';
-                hideIdSearchResults();
-
-            } else {
-                throw new Error(data.error || 'Failed to assign ID');
-            }
-        } catch (err) {
-            console.error('[PROFILE-V2] Assign error:', err);
-            alert('Failed to assign ID: ' + err.message);
-        }
     }
 
     // ===== UNASSIGN PLAYFAB ID =====

@@ -78,22 +78,63 @@ module.exports = async (req, res) => {
             const data = await response.json();
             console.log(`[PLAYFAB-STATS] Success! Got ${data.players?.length || 0} search results`);
 
-            // Enrich each player with parsed aliases
+            // Enrich each player with detailed stats (Level/XP) and sort
             if (data.players && Array.isArray(data.players)) {
-                data.players = data.players.map(player => {
-                    const aliases = player.aliasHistory
-                        ? player.aliasHistory.split(',').map(a => a.trim()).filter(Boolean)
-                        : [];
+                // Limit to top 8 to avoid spamming API and slow response
+                const topPlayers = data.players.slice(0, 8);
 
+                console.log(`[PLAYFAB-STATS] Fetching details for ${topPlayers.length} players...`);
+
+                const enrichedPlayers = await Promise.all(topPlayers.map(async (player) => {
+                    try {
+                        // Fetch detailed stats to get XP/Level
+                        const detailRes = await fetch(`${LEADERBOARD_API}/${player.playfabId}?distinctId=tierlist-app`, {
+                            method: 'GET',
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                                'Accept': 'application/json'
+                            }
+                        });
+
+                        if (detailRes.ok) {
+                            const detailData = await detailRes.json();
+                            const stats = detailData.leaderboardStats || detailData;
+                            const globalXp = stats.globalXp || 0;
+                            const level = globalXp > 0 ? Math.floor(globalXp / 1000) : 0;
+
+                            // Parse aliases
+                            const aliases = player.aliasHistory
+                                ? player.aliasHistory.split(',').map(a => a.trim()).filter(Boolean)
+                                : [];
+
+                            return {
+                                ...player,
+                                ...stats, // Merge detailed stats
+                                aliases,
+                                id: player.playfabId, // Compatibility
+                                level: level,
+                                globalXp: globalXp,
+                                lastSeen: player.lastLookup
+                            };
+                        }
+                    } catch (e) {
+                        console.error(`[PLAYFAB-STATS] Failed to fetch details for ${player.playfabId}:`, e);
+                    }
+
+                    // Fallback if detail fetch fails
                     return {
                         ...player,
-                        aliases,
-                        // Add compatibility fields for frontend
+                        aliases: player.aliasHistory ? player.aliasHistory.split(',').map(a => a.trim()).filter(Boolean) : [],
                         id: player.playfabId,
-                        level: player.lookupCount || 0,
-                        lastSeen: player.lastLookup
+                        level: 0,
+                        globalXp: 0
                     };
-                });
+                }));
+
+                // Sort by XP descending (Level)
+                enrichedPlayers.sort((a, b) => (b.globalXp || 0) - (a.globalXp || 0));
+
+                data.players = enrichedPlayers;
             }
 
             return res.status(200).json({
