@@ -1536,21 +1536,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function areNamesSimilar(name1, name2) {
         if (!name1 || !name2) return false;
-        const n1 = name1.toLowerCase().trim();
-        const n2 = name2.toLowerCase().trim();
 
-        // Exact match (ignoring case)
+        // Helper to normalize: remove special chars, extra spaces, lowercase
+        const normalize = (str) => {
+            return str.toLowerCase()
+                .replace(/[^a-z0-9]/g, '') // Remove non-alphanumeric
+                .trim();
+        };
+
+        const n1 = normalize(name1);
+        const n2 = normalize(name2);
+
+        // 1. Exact match after normalization
+        // e.g. "Fearzing'" -> "fearzing" vs "Fearzing" -> "fearzing"
         if (n1 === n2) return true;
 
-        // One contains the other (if length difference is small, e.g. < 4 chars)
-        // e.g. "Shagedopie" vs "Shagedopie (Clan)"
-        if ((n1.includes(n2) || n2.includes(n1)) && Math.abs(n1.length - n2.length) < 4) {
-            return true;
+        // 2. Substring match with length check
+        // If one contains the other, and the shorter one is at least 4 chars long
+        // This handles "OVA ψ Fearzing'" (ovafearzing) vs "Fearzing" (fearzing)
+        if ((n1.includes(n2) || n2.includes(n1))) {
+            const shorterLen = Math.min(n1.length, n2.length);
+            if (shorterLen >= 4) return true;
         }
 
-        // Levenshtein distance check (allow up to 2 edits)
+        // 3. Levenshtein distance check on normalized strings
+        // Allow slightly more edits for longer names
         const dist = levenshtein(n1, n2);
-        if (dist <= 2) return true;
+        const maxEdits = Math.max(2, Math.floor(Math.min(n1.length, n2.length) / 4));
+
+        if (dist <= maxEdits) return true;
 
         return false;
     }
