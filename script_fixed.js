@@ -349,9 +349,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 else if (d.name) currentNickname = d.name;
             }
 
-            // Fallback if still Unknown
-            if (currentNickname === 'Unknown') {
-                currentNickname = `Player ${playfabId.substring(0, 6)}`;
+            // Fallback if still Unknown or generic
+            if (currentNickname === 'Unknown' || currentNickname.startsWith('Player ')) {
+                // Try to get name from user
+                const manualName = prompt('Nie udało się automatycznie pobrać nazwy gracza. Podaj nazwę:', currentNickname !== 'Unknown' ? currentNickname : '');
+                if (manualName && manualName.trim()) {
+                    currentNickname = manualName.trim();
+                } else {
+                    // If user cancels or empty, keep fallback but ensure it's not just "Unknown"
+                    if (currentNickname === 'Unknown') {
+                        currentNickname = `Player ${playfabId.substring(0, 6)}`;
+                    }
+                }
             }
 
             console.log('[ADD-API] Final nickname:', currentNickname);
