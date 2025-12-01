@@ -510,7 +510,13 @@
     }
 
     // ===== EXPOSE TO GLOBAL =====
-    window.openPlayerProfile = openProfile;
-    console.log('[PROFILE-V2] Exposed openPlayerProfile globally');
+    // We use a timeout inside DOMContentLoaded to ensure we override script_fixed.js
+    // which sets window.openPlayerProfile inside its own DOMContentLoaded listener.
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            window.openPlayerProfile = openProfile;
+            console.log('[PROFILE-V2] Overwrote openPlayerProfile globally');
+        }, 50);
+    });
 
 })();
