@@ -1,0 +1,413 @@
+/* ========================================
+   COMPACT PLAYER PROFILE V2 - STYLES
+   ======================================== */
+
+/* Modal Overlay */
+.profile-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.profile-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+}
+
+/* Compact Container */
+.profile-container-compact {
+    position: relative;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+/* Header */
+.profile-header-compact {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.profile-name-compact {
+    font-size: 24px;
+    font-weight: 700;
+    color: #d4af37;
+    margin: 0 0 8px 0;
+}
+
+.tier-badge-compact {
+    display: inline-block;
+    padding: 4px 12px;
+    background: rgba(212, 175, 55, 0.2);
+    border: 1px solid #d4af37;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #d4af37;
+    text-transform: uppercase;
+}
+
+.profile-close-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 32px;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    line-height: 32px;
+}
+
+.profile-close-btn:hover {
+    opacity: 1;
+}
+
+/* Loading State */
+.profile-loading-compact {
+    padding: 60px 20px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(212, 175, 55, 0.2);
+    border-top-color: #d4af37;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 16px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Error State */
+.profile-error-compact {
+    padding: 40px 20px;
+    text-align: center;
+    color: #ff6b6b;
+}
+
+/* Content */
+.profile-content-compact {
+    padding: 20px;
+}
+
+/* Quick Stats Grid */
+.quick-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.quick-stat {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: center;
+}
+
+.quick-stat-label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 4px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.quick-stat-value {
+    display: block;
+    font-size: 20px;
+    font-weight: 700;
+    color: #d4af37;
+}
+
+/* Sections */
+.section-compact {
+    margin-bottom: 20px;
+}
+
+.section-title-compact {
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0 0 12px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Weapons Grid */
+.weapons-grid-compact {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.weapon-card-compact {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.weapon-name-compact {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+}
+
+.weapon-level-compact {
+    font-size: 14px;
+    font-weight: 700;
+    color: #d4af37;
+}
+
+/* ID Section */
+.id-section {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.id-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.playfab-id-text {
+    flex: 1;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    color: #d4af37;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    user-select: all;
+}
+
+.copy-btn {
+    background: rgba(212, 175, 55, 0.2);
+    border: 1px solid #d4af37;
+    color: #d4af37;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s;
+}
+
+.copy-btn:hover {
+    background: rgba(212, 175, 55, 0.3);
+    transform: scale(1.05);
+}
+
+.copy-btn.copied {
+    background: rgba(76, 175, 80, 0.3);
+    border-color: #4caf50;
+    color: #4caf50;
+}
+
+/* ID Assignment */
+.id-assign-section {
+    margin-top: 12px;
+}
+
+.id-search-input {
+    width: 100%;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: #fff;
+    font-size: 14px;
+}
+
+.id-search-input:focus {
+    outline: none;
+    border-color: #d4af37;
+}
+
+.id-search-results {
+    margin-top: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 4px;
+}
+
+.id-search-result-item {
+    padding: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.id-search-result-item:hover {
+    background: rgba(212, 175, 55, 0.2);
+}
+
+.id-search-result-item:last-child {
+    border-bottom: none;
+}
+
+/* Aliases */
+.aliases-list-compact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.alias-chip-compact {
+    background: rgba(212, 175, 55, 0.2);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.count-badge {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.5);
+    font-weight: normal;
+}
+
+/* Actions */
+.profile-actions-compact {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-primary-compact {
+    flex: 1;
+    padding: 12px;
+    background: linear-gradient(135deg, #d4af37 0%, #aa8929 100%);
+    border: none;
+    border-radius: 6px;
+    color: #000;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-primary-compact:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
+}
+
+.btn-secondary-compact {
+    flex: 1;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    color: #fff;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-secondary-compact:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.btn-danger-compact {
+    width: 100%;
+    margin-top: 8px;
+    padding: 10px;
+    background: rgba(255, 107, 107, 0.2);
+    border: 1px solid #ff6b6b;
+    border-radius: 4px;
+    color: #ff6b6b;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-danger-compact:hover {
+    background: rgba(255, 107, 107, 0.3);
+}
+
+/* Utility */
+.hidden {
+    display: none !important;
+}
+
+/* Scrollbar */
+.profile-container-compact::-webkit-scrollbar {
+    width: 8px;
+}
+
+.profile-container-compact::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.profile-container-compact::-webkit-scrollbar-thumb {
+    background: rgba(212, 175, 55, 0.5);
+    border-radius: 4px;
+}
+
+.profile-container-compact::-webkit-scrollbar-thumb:hover {
+    background: rgba(212, 175, 55, 0.7);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .profile-container-compact {
+        width: 95%;
+        max-height: 95vh;
+    }
+
+    .quick-stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .weapons-grid-compact {
+        grid-template-columns: 1fr;
+    }
+}
